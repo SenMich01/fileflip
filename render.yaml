@@ -3,7 +3,7 @@ services:
     name: fileflip
     env: static
     buildCommand: npm run build
-    startCommand: npm run preview
+    startCommand: npx serve -s dist -l 10000
     envVars:
       - key: NODE_VERSION
         value: 18
