@@ -11,3 +11,4 @@ services:
         sync: false
       - key: VITE_SUPABASE_ANON_KEY
         sync: false
+    port: 10000
