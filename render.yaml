@@ -1,9 +1,9 @@
 services:
   - type: web
     name: fileflip
-    env: static
+    env: node
     buildCommand: npm run build
-    startCommand: npx serve -s dist -l 3000 -l 0.0.0.0
+    startCommand: node server.js
     envVars:
       - key: NODE_VERSION
         value: 18
@@ -13,4 +13,3 @@ services:
         sync: false
       - key: WEB_CONCURRENCY
         value: 4
-    port: 3000
