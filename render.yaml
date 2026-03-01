@@ -3,7 +3,7 @@ services:
     name: fileflip-backend
     env: node
     buildCommand: npm install
-    startCommand: node server.js
+    startCommand: node api-server.js
     envVars:
       - key: NODE_VERSION
         value: 18

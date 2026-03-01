@@ -1,8 +1,8 @@
-import { Check, X } from 'lucide-react';
+import { Check, X, Lock } from 'lucide-react';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { Link } from 'react-router';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface Plan {
   name: string;
@@ -16,6 +16,56 @@ interface Plan {
 
 export default function PricingPage() {
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Check authentication status on component mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const token = localStorage.getItem('userSession');
+        if (token) {
+          // Verify token with backend
+          const response = await fetch(`${import.meta.env.VITE_API_URL}/api/supabase/profile`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          if (response.ok) {
+            setIsLoggedIn(true);
+          }
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  const handleUpgrade = async (plan: Plan) => {
+    if (!isLoggedIn) {
+      // Redirect to login with redirect URL
+      const redirectUrl = encodeURIComponent(window.location.href);
+      window.location.href = `/login?redirect=${redirectUrl}`;
+      return;
+    }
+
+    if (plan.name === 'Pro') {
+      // Redirect to Paystack for payment
+      window.open('https://paystack.com/buy/fileflip-pro-odyigw', '_blank');
+    } else if (plan.name === 'Free') {
+      // Redirect to home for free plan
+      window.location.href = '/';
+    } else {
+      // Handle pay per use
+      alert('Pay Per Use credits will be available soon!');
+    }
+  };
+
   const plans = [
     {
       name: 'Free',
@@ -147,25 +197,15 @@ export default function PricingPage() {
                 </ul>
 
                 <button
-                  onClick={() => {
-                    if (plan.name === 'Pro') {
-                      // Redirect to Paystack for payment
-                      window.open('https://paystack.com/buy/fileflip-pro-odyigw', '_blank');
-                    } else if (plan.name === 'Free') {
-                      // Redirect to home for free plan
-                      window.location.href = '/';
-                    } else {
-                      // Handle pay per use
-                      alert('Pay Per Use credits will be available soon!');
-                    }
-                  }}
+                  onClick={() => handleUpgrade(plan)}
+                  disabled={isLoading}
                   className={`w-full py-3 rounded-lg font-semibold transition ${
                     plan.popular
                       ? 'bg-blue-600 text-white hover:bg-blue-700'
                       : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-                  }`}
+                  } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
-                  {plan.cta}
+                  {isLoading ? 'Checking authentication...' : plan.cta}
                 </button>
               </div>
             ))}
