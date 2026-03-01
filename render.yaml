@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: fileflip
+    env: static
+    buildCommand: npm run build
+    startCommand: npm run preview
+    envVars:
+      - key: NODE_VERSION
+        value: 18
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false
