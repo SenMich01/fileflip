@@ -3,7 +3,7 @@ services:
     name: fileflip
     env: static
     buildCommand: npm run build
-    startCommand: npx serve -s dist -l 10000
+    startCommand: npx serve -s dist -l 3000 -l 0.0.0.0
     envVars:
       - key: NODE_VERSION
         value: 18
@@ -11,4 +11,6 @@ services:
         sync: false
       - key: VITE_SUPABASE_ANON_KEY
         sync: false
-    port: 10000
+      - key: WEB_CONCURRENCY
+        value: 4
+    port: 3000
