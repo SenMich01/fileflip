@@ -14,6 +14,12 @@ export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
+  // Debug environment variables
+  console.log('🔧 Frontend Environment Variables:');
+  console.log('VITE_API_URL:', import.meta.env.VITE_API_URL || '❌ Missing');
+  console.log('VITE_SUPABASE_URL:', import.meta.env.VITE_SUPABASE_URL || '❌ Missing');
+  console.log('VITE_SUPABASE_ANON_KEY:', import.meta.env.VITE_SUPABASE_ANON_KEY ? '✅ Set' : '❌ Missing');
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -42,6 +48,10 @@ export default function SignupPage() {
     setIsLoading(true);
 
     try {
+      console.log('🔐 Signup attempt for:', email);
+      console.log('📡 API URL:', import.meta.env.VITE_API_URL);
+      console.log('📧 Request payload:', { email, password: '***', metadata: { name } });
+
       // Use Supabase MCP server to sign up
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/supabase/sign-up`, {
         method: 'POST',
@@ -55,8 +65,12 @@ export default function SignupPage() {
         }),
       });
 
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response ok:', response.ok);
+
       if (response.ok) {
         const data = await response.json();
+        console.log('✅ Signup successful:', data);
         
         // Store authentication data
         localStorage.setItem('isLoggedIn', 'true');
@@ -82,10 +96,14 @@ export default function SignupPage() {
         }
       } else {
         const errorData = await response.json();
+        console.error('❌ Signup failed:', errorData);
         setError(errorData.error || 'Failed to create account');
       }
     } catch (err) {
-      setError('Network error. Please try again.');
+      console.error('🚨 Network error details:', err);
+      console.error('🚨 Error type:', err instanceof Error ? err.constructor.name : typeof err);
+      console.error('🚨 Error message:', err instanceof Error ? err.message : String(err));
+      setError('Network error. Please try again. Check console for details.');
     } finally {
       setIsLoading(false);
     }

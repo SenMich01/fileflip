@@ -14,12 +14,30 @@ const HOST = process.env.HOST || '0.0.0.0';
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
 
+console.log('🔧 Backend Environment Variables:');
+console.log('VITE_SUPABASE_URL:', supabaseUrl ? '✅ Set' : '❌ Missing');
+console.log('VITE_SUPABASE_ANON_KEY:', supabaseAnonKey ? '✅ Set' : '❌ Missing');
+console.log('FRONTEND_URL:', process.env.FRONTEND_URL || 'Not set');
+
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Missing Supabase environment variables');
+  console.error('❌ Missing Supabase environment variables');
+  console.error('VITE_SUPABASE_URL:', supabaseUrl);
+  console.error('VITE_SUPABASE_ANON_KEY:', supabaseAnonKey);
   process.exit(1);
 }
 
+console.log('🔗 Initializing Supabase client with URL:', supabaseUrl);
+
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// Test Supabase connection
+supabase.auth.getUser().then(({ data, error }) => {
+  if (error) {
+    console.log('⚠️  Supabase connection test failed:', error.message);
+  } else {
+    console.log('✅ Supabase client initialized successfully');
+  }
+});
 
 // Enable CORS for frontend domain
 app.use(cors({

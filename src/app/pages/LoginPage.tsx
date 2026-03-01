@@ -11,12 +11,22 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  // Debug environment variables
+  console.log('🔧 Frontend Environment Variables:');
+  console.log('VITE_API_URL:', import.meta.env.VITE_API_URL || '❌ Missing');
+  console.log('VITE_SUPABASE_URL:', import.meta.env.VITE_SUPABASE_URL || '❌ Missing');
+  console.log('VITE_SUPABASE_ANON_KEY:', import.meta.env.VITE_SUPABASE_ANON_KEY ? '✅ Set' : '❌ Missing');
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
     try {
+      console.log('🔐 Login attempt for:', email);
+      console.log('📡 API URL:', import.meta.env.VITE_API_URL);
+      console.log('📧 Request payload:', { email, password: '***' });
+
       // Use Supabase MCP server to sign in
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/supabase/sign-in`, {
         method: 'POST',
@@ -26,8 +36,12 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password }),
       });
 
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response ok:', response.ok);
+
       if (response.ok) {
         const data = await response.json();
+        console.log('✅ Login successful:', data);
         
         // Store authentication data
         localStorage.setItem('isLoggedIn', 'true');
@@ -52,10 +66,14 @@ export default function LoginPage() {
         }
       } else {
         const errorData = await response.json();
+        console.error('❌ Login failed:', errorData);
         setError(errorData.error || 'Invalid email or password');
       }
     } catch (err) {
-      setError('Network error. Please try again.');
+      console.error('🚨 Network error details:', err);
+      console.error('🚨 Error type:', err instanceof Error ? err.constructor.name : typeof err);
+      console.error('🚨 Error message:', err instanceof Error ? err.message : String(err));
+      setError('Network error. Please try again. Check console for details.');
     } finally {
       setIsLoading(false);
     }
