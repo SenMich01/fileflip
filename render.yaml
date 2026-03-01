@@ -1,19 +1,25 @@
 services:
   - type: web
-    name: fileflip
+    name: fileflip-backend
     env: node
-    buildCommand: npm run build
+    buildCommand: npm install
     startCommand: node server.js
     envVars:
       - key: NODE_VERSION
         value: 18
-      - key: HOST
-        value: 0.0.0.0
-      - key: PORT
-        value: 10000
       - key: VITE_SUPABASE_URL
         sync: false
       - key: VITE_SUPABASE_ANON_KEY
         sync: false
       - key: WEB_CONCURRENCY
         value: 4
+      - key: FRONTEND_URL
+        fromGroupSecret: FRONTEND_URL
+
+  - type: static
+    name: fileflip-frontend
+    buildCommand: npm run build
+    publishDirectory: dist
+    envVars:
+      - key: VITE_API_URL
+        fromGroupSecret: API_URL

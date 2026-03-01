@@ -43,7 +43,7 @@ export default function SignupPage() {
 
     try {
       // Use Supabase MCP server to sign up
-      const response = await fetch('/api/supabase/sign-up', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/supabase/sign-up`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

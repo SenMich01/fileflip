@@ -18,7 +18,7 @@ export default function LoginPage() {
 
     try {
       // Use Supabase MCP server to sign in
-      const response = await fetch('/api/supabase/sign-in', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/supabase/sign-in`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

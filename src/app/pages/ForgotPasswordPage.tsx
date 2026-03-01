@@ -17,7 +17,7 @@ export default function ForgotPasswordPage() {
 
     try {
       // Use Supabase MCP server to send password reset email
-      const response = await fetch('/api/supabase/reset-password', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/supabase/reset-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
