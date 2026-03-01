@@ -34,7 +34,22 @@ export default function LoginPage() {
         localStorage.setItem('userEmail', email);
         localStorage.setItem('userSession', JSON.stringify(data.session));
         
-        navigate('/');
+        // Check if user was trying to upgrade a plan
+        const pendingUpgrade = localStorage.getItem('pendingUpgrade');
+        const pendingPlan = localStorage.getItem('pendingUpgradePlan');
+        
+        if (pendingUpgrade === 'true' && pendingPlan === 'Pro') {
+          // Redirect to Paystack for payment
+          localStorage.removeItem('pendingUpgrade');
+          localStorage.removeItem('pendingUpgradePlan');
+          window.open('https://paystack.com/buy/fileflip-pro-odyigw', '_blank');
+          // Optionally redirect to home after a short delay
+          setTimeout(() => {
+            navigate('/');
+          }, 2000);
+        } else {
+          navigate('/');
+        }
       } else {
         const errorData = await response.json();
         setError(errorData.error || 'Invalid email or password');

@@ -48,9 +48,10 @@ export default function PricingPage() {
 
   const handleUpgrade = async (plan: Plan) => {
     if (!isLoggedIn) {
-      // Redirect to login with redirect URL
-      const redirectUrl = encodeURIComponent(window.location.href);
-      window.location.href = `/login?redirect=${redirectUrl}`;
+      // Store the plan they want to upgrade to and redirect to signup
+      localStorage.setItem('pendingUpgradePlan', plan.name);
+      localStorage.setItem('pendingUpgrade', 'true');
+      window.location.href = '/signup';
       return;
     }
 
