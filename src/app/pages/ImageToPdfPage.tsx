@@ -5,6 +5,7 @@ import { ConversionStatus } from '../components/ConversionStatus';
 import { FeatureSection } from '../components/FeatureSection';
 import { Footer } from '../components/Footer';
 import { Image, FileText, Shield, Zap, Layers } from 'lucide-react';
+import { IMAGE_FORMATS } from '../../config/formats';
 
 type ConversionState = 'idle' | 'uploading' | 'converting' | 'completed' | 'error';
 
@@ -159,12 +160,12 @@ export default function ImageToPdfPage() {
             <div className="mb-8">
               <p className="text-sm text-gray-600 mb-3">Supported image formats:</p>
               <div className="flex flex-wrap justify-center gap-3">
-                {['JPG', 'JPEG', 'PNG', 'GIF', 'WebP'].map((format) => (
+                {IMAGE_FORMATS.map((format) => (
                   <span
-                    key={format}
+                    key={format.value}
                     className="px-4 py-2 bg-white rounded-lg border border-gray-200 text-sm font-medium text-gray-700"
                   >
-                    {format}
+                    {format.label}
                   </span>
                 ))}
               </div>

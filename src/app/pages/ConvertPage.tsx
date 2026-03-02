@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { FileText, Upload, File, Loader2, Download } from 'lucide-react';
+import { CONVERSION_CONFIG, getMimeTypes } from '../../config/formats';
 
 export default function ConvertPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -70,13 +71,7 @@ export default function ConvertPage() {
     }
   };
 
-  const formats = [
-    { value: 'pdf', label: 'PDF' },
-    { value: 'epub', label: 'EPUB' },
-    { value: 'jpg', label: 'JPG' },
-    { value: 'png', label: 'PNG' },
-    { value: 'docx', label: 'DOCX' },
-  ];
+  const formats = CONVERSION_CONFIG.outputFormats;
 
   return (
     <div className="min-h-screen bg-gray-50">

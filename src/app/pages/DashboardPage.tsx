@@ -91,7 +91,10 @@ export default function DashboardPage() {
                 </div>
                 <FileText className="w-12 h-12 text-blue-600" />
               </div>
-              <button className="mt-4 w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">
+              <button 
+                onClick={() => navigate('/convert')}
+                className="mt-4 w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition cursor-pointer"
+              >
                 Start Converting
               </button>
             </div>
@@ -104,7 +107,10 @@ export default function DashboardPage() {
                 </div>
                 <Upload className="w-12 h-12 text-green-600" />
               </div>
-              <button className="mt-4 w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition">
+              <button 
+                onClick={() => navigate('/upload')}
+                className="mt-4 w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition cursor-pointer"
+              >
                 Upload Files
               </button>
             </div>
@@ -117,7 +123,10 @@ export default function DashboardPage() {
                 </div>
                 <History className="w-12 h-12 text-purple-600" />
               </div>
-              <button className="mt-4 w-full bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition">
+              <button 
+                onClick={() => navigate('/history')}
+                className="mt-4 w-full bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition cursor-pointer"
+              >
                 View History
               </button>
             </div>
@@ -142,13 +151,22 @@ export default function DashboardPage() {
                 <h3 className="text-lg font-semibold text-gray-900">Settings</h3>
               </div>
               <div className="space-y-3">
-                <button className="w-full text-left text-sm text-gray-600 hover:text-gray-900 transition">
+                <button 
+                  onClick={() => navigate('/settings/profile')}
+                  className="w-full text-left text-sm text-gray-600 hover:text-gray-900 transition cursor-pointer"
+                >
                   Profile Settings
                 </button>
-                <button className="w-full text-left text-sm text-gray-600 hover:text-gray-900 transition">
+                <button 
+                  onClick={() => navigate('/settings/security')}
+                  className="w-full text-left text-sm text-gray-600 hover:text-gray-900 transition cursor-pointer"
+                >
                   Security Settings
                 </button>
-                <button className="w-full text-left text-sm text-gray-600 hover:text-gray-900 transition">
+                <button 
+                  onClick={() => navigate('/settings/notifications')}
+                  className="w-full text-left text-sm text-gray-600 hover:text-gray-900 transition cursor-pointer"
+                >
                   Notification Preferences
                 </button>
               </div>
