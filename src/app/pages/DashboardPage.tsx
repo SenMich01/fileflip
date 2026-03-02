@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
+import { supabase } from '../../lib/supabase';
 import { FileText, Upload, History, Settings, LogOut, User } from 'lucide-react';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
@@ -18,25 +19,27 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is authenticated
-    const checkAuth = () => {
-      const isLoggedIn = localStorage.getItem('isLoggedIn');
-      const userSession = localStorage.getItem('userSession');
-      
-      if (!isLoggedIn || !userSession) {
-        // Redirect to login if not authenticated
-        navigate('/login');
-        return;
-      }
-
+    // Check if user is authenticated using Supabase
+    const checkAuth = async () => {
       try {
-        const session = JSON.parse(userSession);
-        setUser(session);
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+          // Redirect to login if not authenticated
+          navigate('/login');
+          return;
+        }
+
+        setUser({
+          user: {
+            email: session.user.email || '',
+            id: session.user.id
+          },
+          access_token: session.access_token
+        });
         setIsLoading(false);
       } catch (error) {
-        console.error('Error parsing user session:', error);
-        localStorage.removeItem('isLoggedIn');
-        localStorage.removeItem('userSession');
+        console.error('Error checking authentication:', error);
         navigate('/login');
       }
     };

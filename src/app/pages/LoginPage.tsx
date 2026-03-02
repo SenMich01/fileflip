@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
+import { supabase } from '../../lib/supabase';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { FileText, Mail, Lock, AlertCircle } from 'lucide-react';
@@ -24,57 +25,36 @@ export default function LoginPage() {
 
     try {
       console.log('🔐 Login attempt for:', email);
-      console.log('📡 API URL:', import.meta.env.VITE_API_URL);
-      console.log('📧 Request payload:', { email, password: '***' });
-
-      // Use Supabase MCP server to sign in
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/supabase/sign-in`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
       });
-
-      console.log('📡 Response status:', response.status);
-      console.log('📡 Response ok:', response.ok);
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log('✅ Login successful:', data);
-        
-        // Store authentication data
-        localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('userEmail', email);
-        localStorage.setItem('userSession', JSON.stringify(data.session));
-        
-        // Check if user was trying to upgrade a plan
-        const pendingUpgrade = localStorage.getItem('pendingUpgrade');
-        const pendingPlan = localStorage.getItem('pendingUpgradePlan');
-        
-        if (pendingUpgrade === 'true' && pendingPlan === 'Pro') {
-          // Redirect to Paystack for payment
-          localStorage.removeItem('pendingUpgrade');
-          localStorage.removeItem('pendingUpgradePlan');
-          window.open('https://paystack.com/buy/fileflip-pro-odyigw', '_blank');
-          // Optionally redirect to home after a short delay
-          setTimeout(() => {
-            navigate('/');
-          }, 2000);
-        } else {
-          // Redirect to dashboard on successful login
-          navigate('/dashboard');
-        }
+      
+      if (error) throw error;
+      
+      console.log('✅ Login successful:', data);
+      
+      // Check if user was trying to upgrade a plan
+      const pendingUpgrade = localStorage.getItem('pendingUpgrade');
+      const pendingPlan = localStorage.getItem('pendingUpgradePlan');
+      
+      if (pendingUpgrade === 'true' && pendingPlan === 'Pro') {
+        // Redirect to Paystack for payment
+        localStorage.removeItem('pendingUpgrade');
+        localStorage.removeItem('pendingUpgradePlan');
+        window.open('https://paystack.com/buy/fileflip-pro-odyigw', '_blank');
+        // Optionally redirect to home after a short delay
+        setTimeout(() => {
+          navigate('/');
+        }, 2000);
       } else {
-        const errorData = await response.json();
-        console.error('❌ Login failed:', errorData);
-        setError(errorData.error || 'Invalid email or password');
+        // Redirect to dashboard on successful login
+        navigate('/dashboard');
       }
-    } catch (err) {
-      console.error('🚨 Network error details:', err);
-      console.error('🚨 Error type:', err instanceof Error ? err.constructor.name : typeof err);
-      console.error('🚨 Error message:', err instanceof Error ? err.message : String(err));
-      setError('Network error. Please try again. Check console for details.');
+    } catch (error) {
+      console.error('🚨 Login error:', error);
+      setError(error instanceof Error ? error.message : 'An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }
