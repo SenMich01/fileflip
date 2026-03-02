@@ -5,6 +5,7 @@ import PrivacyPage from "./pages/PrivacyPage";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import DashboardPage from "./pages/DashboardPage";
 import EpubToPdfPage from "./pages/EpubToPdfPage";
 import ImageToPdfPage from "./pages/ImageToPdfPage";
 
@@ -32,6 +33,10 @@ export const router = createBrowserRouter([
   {
     path: "/forgot-password",
     element: <ForgotPasswordPage />,
+  },
+  {
+    path: "/dashboard",
+    element: <DashboardPage />,
   },
   {
     path: "/epub-to-pdf",

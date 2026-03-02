@@ -62,7 +62,8 @@ export default function LoginPage() {
             navigate('/');
           }, 2000);
         } else {
-          navigate('/');
+          // Redirect to dashboard on successful login
+          navigate('/dashboard');
         }
       } else {
         const errorData = await response.json();
