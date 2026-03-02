@@ -205,6 +205,13 @@
     font-weight: var(--font-weight-normal);
     line-height: 1.5;
   }
+  
+  /* Fix input text color for non-desktop screens */
+  @media (max-width: 1024px) {
+    input, textarea, select {
+      color: var(--foreground);
+    }
+  }
 }
 
 /* Responsive Design Enhancements */

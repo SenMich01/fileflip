@@ -182,7 +182,7 @@ export function Header() {
             className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition touch-target"
             aria-label="Toggle menu"
           >
-            {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            {isMenuOpen ? <X className="w-6 h-6 text-black" /> : <Menu className="w-6 h-6 text-black" />}
           </button>
         </div>
 
