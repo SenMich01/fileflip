@@ -1,27 +1,23 @@
 services:
   - type: web
-    name: fileflip-backend
+    name: fileflip-api
     env: node
     buildCommand: npm install
-    startCommand: node api-server.js
+    startCommand: node server.js
     envVars:
-      - key: NODE_VERSION
-        value: 18
-      - key: VITE_SUPABASE_URL
-        value: https://qywnkclecicqpdauafht.supabase.co
-      - key: VITE_SUPABASE_ANON_KEY
-        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF5d25rY2xlY2ljcXBkYXVhZmh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzNDU3NDgsImV4cCI6MjA4NzkyMTc0OH0.C3Nq9G2A4xOdegbq7IQMOFh3YYpgAcIMgSRmGIZ4nz8
-      - key: VITE_SUPABASE_SERVICE_KEY
-        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF5d25rY2xlY2ljcXBkYXVhZmh0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjM0NTc0OCwiZXhwIjoyMDg3OTIxNzQ4fQ.2S5UBfgnK4DDjuI1XCkWkKur2qokmS8eArfq-MR5c8g
-      - key: WEB_CONCURRENCY
-        value: 4
-      - key: FRONTEND_URL
-        value: https://fileflip-2.onrender.com
+      - key: PORT
+        value: 10000
+      - key: NODE_ENV
+        value: production
 
   - type: static
-    name: fileflip-frontend
+    name: fileflip
     buildCommand: npm run build
-    publishDirectory: dist
+    staticPublishPath: dist
     envVars:
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false
       - key: VITE_API_URL
-        value: https://fileflip-1.onrender.com
+        value: https://fileflip-api.onrender.com

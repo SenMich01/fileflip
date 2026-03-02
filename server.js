@@ -1,17 +1,21 @@
 const express = require('express');
-const path = require('path');
+const cors = require('cors');
 
 const app = express();
 const PORT = process.env.PORT || 10000;
-const HOST = process.env.HOST || '0.0.0.0';
+const HOST = '0.0.0.0';
 
-// Serve static files from dist
-app.use(express.static(path.join(__dirname, 'dist')));
+app.use(cors({
+  origin: 'https://fileflip-2.onrender.com'
+}));
+app.use(express.json());
 
-// Handle ALL client-side routes — must be last
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+// Only API routes here
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok' });
 });
+
+// Add all other API routes here
 
 app.listen(PORT, HOST, () => {
   console.log(`Server running on ${HOST}:${PORT}`);
