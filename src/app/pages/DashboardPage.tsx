@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { supabase } from '../../lib/supabase';
-import { FileText, Upload, History, Settings, LogOut, User } from 'lucide-react';
+import { FileText, Upload, History, Settings, LogOut, User, ChevronDown } from 'lucide-react';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 
