@@ -44,7 +44,7 @@ npm run build
 ### Start Command
 Set the **Start Command** on Render to:
 ```bash
-node server.js
+node dist/server.js
 ```
 
 ### Environment Variables
