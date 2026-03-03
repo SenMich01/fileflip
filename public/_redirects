@@ -1,1 +1,6 @@
+# SPA fallback routing - serve index.html for all routes except static assets
 /* /index.html 200
+
+# Ensure static assets are served correctly
+/assets/* /assets/:splat 200
+/favicon.ico /favicon.ico 200
