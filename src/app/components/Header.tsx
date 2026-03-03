@@ -47,7 +47,7 @@ export function Header() {
       <div className="nav-responsive">
         <div className="flex items-center justify-between">
           <Link to="/" className="flex items-center gap-3 touch-target">
-            <img src="/FileFlip Logo.jpg" alt="FileFlip Logo" className="w-10 h-10 object-contain" />
+            <img src="/public/FileFlip Logo.jpg" alt="FileFlip Logo" className="w-10 h-10 object-contain" />
             <span className="text-2xl font-bold text-gray-900">FileFlip</span>
           </Link>
 

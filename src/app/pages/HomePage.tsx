@@ -111,7 +111,7 @@ export default function HomePage() {
             <div className="text-center space-y-responsive">
               <div className="space-y-4">
                 <div className="flex justify-center mb-4">
-                  <img src="/FileFlip Logo.jpg" alt="FileFlip Logo" className="w-20 h-20 object-contain" />
+                  <img src="/public/FileFlip Logo.jpg" alt="FileFlip Logo" className="w-20 h-20 object-contain" />
                 </div>
                 <h1 className="text-responsive-lg font-bold text-gray-900">
                   Fast, Secure File Conversion
