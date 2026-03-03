@@ -1,15 +1,23 @@
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
+const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 10000;
 const HOST = '0.0.0.0';
 
 app.use(cors({
-  origin: 'https://fileflip-2.onrender.com'
+  origin: 'https://fileflip.onrender.com'
 }));
 app.use(express.json());
+
+// Serve static files from dist directory
+app.use(express.static(path.join(__dirname, 'dist')));
+
+// Serve static files from public directory
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Only API routes here
 app.get('/api/health', (req, res) => {
@@ -175,6 +183,33 @@ app.post('/api/deduct-credits', async (req, res) => {
 });
 
 // Add all other API routes here
+
+// SPA fallback route - serve index.html for all non-API routes
+app.get('*', (req, res) => {
+  // Don't serve index.html for API routes
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ error: 'API route not found' });
+  }
+  
+  // Don't serve index.html for static assets
+  if (req.path.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/)) {
+    return res.status(404).send('Static asset not found');
+  }
+  
+  // Serve the SPA for all other routes
+  const indexPath = path.join(__dirname, 'dist', 'index.html');
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    // Fallback to serving from public directory
+    const publicIndexPath = path.join(__dirname, 'public', 'index.html');
+    if (fs.existsSync(publicIndexPath)) {
+      res.sendFile(publicIndexPath);
+    } else {
+      res.status(404).send('Page not found');
+    }
+  }
+});
 
 app.listen(PORT, HOST, () => {
   console.log(`Server running on ${HOST}:${PORT}`);

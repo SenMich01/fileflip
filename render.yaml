@@ -1,23 +1,17 @@
 services:
   - type: web
-    name: fileflip-api
+    name: fileflip
     env: node
-    buildCommand: npm install
+    buildCommand: npm install && npm run build
     startCommand: node server.js
     envVars:
       - key: PORT
         value: 10000
       - key: NODE_ENV
         value: production
-
-  - type: static
-    name: fileflip
-    buildCommand: npm run build
-    staticPublishPath: dist
-    envVars:
       - key: VITE_SUPABASE_URL
         sync: false
       - key: VITE_SUPABASE_ANON_KEY
         sync: false
       - key: VITE_API_URL
-        value: https://fileflip-api.onrender.com
+        value: https://fileflip.onrender.com
