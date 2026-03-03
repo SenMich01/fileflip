@@ -71,7 +71,7 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between mb-8">
             <div className="text-center">
               <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-4">
-                <img src="/public/FileFlip Logo.jpg" alt="FileFlip Logo" className="w-10 h-10 object-contain" />
+                <img src="/FileFlip Logo.jpg" alt="FileFlip Logo" className="w-10 h-10 object-contain" />
               </div>
               <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
               <p className="text-gray-600 mt-2">Welcome back, {user?.user.email}</p>
