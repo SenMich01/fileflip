@@ -105,13 +105,13 @@ export default function PricingPage() {
 
     if (plan.name === 'Pro') {
       // Redirect to Paystack for payment
-      window.open(`${PAYMENT_LINKS.pro}?plan=${plan.name}&email=${userPlan?.email || ''}`, '_blank');
+      window.open(PAYMENT_LINKS.pro, '_blank');
     } else if (plan.name === 'Free') {
       // Redirect to home for free plan
       window.location.href = '/';
     } else {
       // Handle pay per use
-      window.open(`${PAYMENT_LINKS.payPerUse}?plan=${plan.name}&email=${userPlan?.email || ''}`, '_blank');
+      window.open(PAYMENT_LINKS.payPerUse, '_blank');
     }
   };
 
@@ -184,6 +184,21 @@ export default function PricingPage() {
 
       <main className="flex-1 py-16 px-4">
         <div className="max-w-7xl mx-auto">
+          {/* Success Message */}
+          {showSuccessMessage && (
+            <div className="mb-8 bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                  <Check className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-green-900">Payment Successful!</h3>
+                  <p className="text-green-700">Your plan has been updated successfully.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Header */}
           <div className="text-center mb-16">
             <h1 className="text-4xl font-bold text-gray-900 mb-4">
