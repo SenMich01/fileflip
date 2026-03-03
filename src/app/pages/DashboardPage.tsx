@@ -69,7 +69,10 @@ export default function DashboardPage() {
       <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         <div className="bg-white rounded-2xl shadow-sm p-8">
           <div className="flex items-center justify-between mb-8">
-            <div>
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-4">
+                <img src="/FileFlip Logo.jpg" alt="FileFlip Logo" className="w-10 h-10 object-contain" />
+              </div>
               <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
               <p className="text-gray-600 mt-2">Welcome back, {user?.user.email}</p>
             </div>
