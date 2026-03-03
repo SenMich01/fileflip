@@ -95,23 +95,15 @@ export default function PricingPage() {
   };
 
   const handleUpgrade = async (plan: Plan) => {
-    if (!isLoggedIn) {
-      // Store the plan they want to upgrade to and redirect to signup
-      localStorage.setItem('pendingUpgradePlan', plan.name);
-      localStorage.setItem('pendingUpgrade', 'true');
-      window.location.href = '/signup';
-      return;
-    }
-
     if (plan.name === 'Pro') {
       // Redirect to Paystack for payment
-      window.open(PAYMENT_LINKS.pro, '_blank');
+      window.open('https://paystack.com/buy/fileflip-pro-odyigw', '_blank');
     } else if (plan.name === 'Free') {
       // Redirect to home for free plan
       window.location.href = '/';
     } else {
       // Handle pay per use
-      window.open(PAYMENT_LINKS.payPerUse, '_blank');
+      window.open('https://paystack.com/buy/buy-credits-file-flip-dvuihl', '_blank');
     }
   };
 
