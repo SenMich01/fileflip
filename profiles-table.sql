@@ -5,6 +5,9 @@ CREATE TABLE profiles (
   full_name TEXT,
   avatar_url TEXT,
   website TEXT,
+  plan_type TEXT DEFAULT 'Free' CHECK (plan_type IN ('Free', 'Pro', 'Pay Per Use')),
+  credits INTEGER DEFAULT 0,
+  pro_expires_at TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

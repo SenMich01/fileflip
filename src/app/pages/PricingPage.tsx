@@ -1,8 +1,9 @@
-import { Check, X, Lock } from 'lucide-react';
+import { Check, X, Lock, CreditCard, Zap, Users } from 'lucide-react';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { Link } from 'react-router';
 import { useState, useEffect } from 'react';
+import { verifyPayment, getUserPlanStatus, PAYMENT_LINKS } from '../../lib/payment';
 
 interface Plan {
   name: string;
@@ -12,12 +13,23 @@ interface Plan {
   features: { text: string; included: boolean }[];
   cta: string;
   popular: boolean;
+  color: string;
+}
+
+interface UserPlan {
+  planType: string;
+  credits: number;
+  isPro: boolean;
+  proExpiresAt?: string;
+  email?: string;
 }
 
 export default function PricingPage() {
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [userPlan, setUserPlan] = useState<UserPlan | null>(null);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
 
   // Check authentication status on component mount
   useEffect(() => {
@@ -26,7 +38,7 @@ export default function PricingPage() {
         const token = localStorage.getItem('userSession');
         if (token) {
           // Verify token with backend
-          const response = await fetch(`${import.meta.env.VITE_API_URL}/api/supabase/profile`, {
+          const response = await fetch(`${import.meta.env.VITE_API_URL}/api/user-credits`, {
             headers: {
               'Authorization': `Bearer ${token}`
             }
@@ -34,6 +46,9 @@ export default function PricingPage() {
           
           if (response.ok) {
             setIsLoggedIn(true);
+            // Get user plan status
+            const planStatus = await getUserPlanStatus();
+            setUserPlan(planStatus);
           }
         }
       } catch (error) {
@@ -46,6 +61,39 @@ export default function PricingPage() {
     checkAuth();
   }, []);
 
+  // Check for payment verification on page load (from Paystack redirect)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const reference = urlParams.get('reference');
+    const planType = urlParams.get('plan');
+    
+    if (reference && planType && isLoggedIn && userPlan) {
+      verifyPaymentFromPaystack(reference, planType);
+    }
+  }, [isLoggedIn, userPlan]);
+
+  const verifyPaymentFromPaystack = async (reference: string, planType: string) => {
+    try {
+      const result = await verifyPayment(reference, userPlan?.email || '', planType);
+      if (result.success) {
+        setShowSuccessMessage(true);
+        // Refresh user plan status
+        const planStatus = await getUserPlanStatus();
+        setUserPlan(planStatus);
+        
+        // Remove query params
+        const url = new URL(window.location.href);
+        url.searchParams.delete('reference');
+        url.searchParams.delete('plan');
+        window.history.replaceState({}, '', url.toString());
+        
+        setTimeout(() => setShowSuccessMessage(false), 5000);
+      }
+    } catch (error) {
+      console.error('Payment verification failed:', error);
+    }
+  };
+
   const handleUpgrade = async (plan: Plan) => {
     if (!isLoggedIn) {
       // Store the plan they want to upgrade to and redirect to signup
@@ -57,17 +105,23 @@ export default function PricingPage() {
 
     if (plan.name === 'Pro') {
       // Redirect to Paystack for payment
-      window.open('https://paystack.com/buy/fileflip-pro-odyigw', '_blank');
+      window.open(`${PAYMENT_LINKS.pro}?plan=${plan.name}&email=${userPlan?.email || ''}`, '_blank');
     } else if (plan.name === 'Free') {
       // Redirect to home for free plan
       window.location.href = '/';
     } else {
       // Handle pay per use
-      alert('Pay Per Use credits will be available soon!');
+      window.open(`${PAYMENT_LINKS.payPerUse}?plan=${plan.name}&email=${userPlan?.email || ''}`, '_blank');
     }
   };
 
-  const plans = [
+  const getCurrentPlanStatus = () => {
+    if (!userPlan) return 'Free';
+    if (userPlan.isPro) return 'Pro';
+    return userPlan.planType || 'Free';
+  };
+
+  const plans: Plan[] = [
     {
       name: 'Free',
       price: '$0',
@@ -84,6 +138,7 @@ export default function PricingPage() {
       ],
       cta: 'Get Started',
       popular: false,
+      color: 'gray',
     },
     {
       name: 'Pro',
@@ -101,6 +156,7 @@ export default function PricingPage() {
       ],
       cta: 'Upgrade Now',
       popular: true,
+      color: 'blue',
     },
     {
       name: 'Pay Per Use',
@@ -118,6 +174,7 @@ export default function PricingPage() {
       ],
       cta: 'Buy Credits',
       popular: false,
+      color: 'green',
     },
   ];
 

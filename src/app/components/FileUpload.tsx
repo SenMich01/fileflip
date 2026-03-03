@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
-import { Upload, FileText } from 'lucide-react';
+import { Upload, FileText, Lock } from 'lucide-react';
+import { useConversionAccess } from '../../hooks/useConversionAccess';
 
 interface FileUploadProps {
   onFileSelect: (file: File) => void;
@@ -9,6 +10,7 @@ interface FileUploadProps {
 
 export function FileUpload({ onFileSelect, acceptedFormats = '.pdf,application/pdf', formatLabel = 'PDF' }: FileUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
+  const { canConvertFiles, planStatus } = useConversionAccess();
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -28,26 +30,46 @@ export function FileUpload({ onFileSelect, acceptedFormats = '.pdf,application/p
     const file = files[0];
 
     if (file) {
-      // Check file size (10MB limit for free tier)
-      if (file.size > 10 * 1024 * 1024) {
-        alert('File size exceeds 10MB limit. Please upgrade for larger files.');
+      // Check conversion access first
+      if (!canConvertFiles) {
+        alert('You need a Pro subscription or credits to convert files. Please upgrade your plan.');
         return;
       }
+
+      // Check file size limits based on plan
+      const maxSize = planStatus?.isPro ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
+      const maxSizeMB = planStatus?.isPro ? '100MB' : '10MB';
+      
+      if (file.size > maxSize) {
+        alert(`File size exceeds ${maxSizeMB} limit for your plan. Please upgrade for larger files.`);
+        return;
+      }
+      
       onFileSelect(file);
     }
-  }, [onFileSelect]);
+  }, [onFileSelect, canConvertFiles, planStatus]);
 
   const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Check file size (10MB limit for free tier)
-      if (file.size > 10 * 1024 * 1024) {
-        alert('File size exceeds 10MB limit. Please upgrade for larger files.');
+      // Check conversion access first
+      if (!canConvertFiles) {
+        alert('You need a Pro subscription or credits to convert files. Please upgrade your plan.');
         return;
       }
+
+      // Check file size limits based on plan
+      const maxSize = planStatus?.isPro ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
+      const maxSizeMB = planStatus?.isPro ? '100MB' : '10MB';
+      
+      if (file.size > maxSize) {
+        alert(`File size exceeds ${maxSizeMB} limit for your plan. Please upgrade for larger files.`);
+        return;
+      }
+      
       onFileSelect(file);
     }
-  }, [onFileSelect]);
+  }, [onFileSelect, canConvertFiles, planStatus]);
 
   return (
     <div
