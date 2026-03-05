@@ -17,9 +17,21 @@ export function useConversionAccess() {
   useEffect(() => {
     const checkAccess = async () => {
       try {
-        const status = await getUserPlanStatus();
-        setPlanStatus(status);
-        setCanConvertFiles(status.isPro || status.credits > 0);
+        const token = localStorage.getItem('userSession');
+        if (token) {
+          const status = await getUserPlanStatus();
+          setPlanStatus(status);
+          setCanConvertFiles(status.isPro || status.credits > 0);
+        } else {
+          // Check guest credits
+          let guestCredits = parseInt(localStorage.getItem('guestCredits') || '0');
+          if (guestCredits === 0) {
+            // Give new guest users 3 free credits
+            guestCredits = 3;
+            localStorage.setItem('guestCredits', '3');
+          }
+          setCanConvertFiles(guestCredits > 0);
+        }
       } catch (error) {
         console.error('Error checking conversion access:', error);
         setCanConvertFiles(false);
@@ -33,14 +45,25 @@ export function useConversionAccess() {
 
   const checkAccessBeforeConversion = async () => {
     try {
-      const status = await getUserPlanStatus();
-      const hasAccess = status.isPro || status.credits > 0;
-      
-      if (!hasAccess) {
-        throw new Error('Insufficient credits or Pro subscription required');
+      const token = localStorage.getItem('userSession');
+      if (token) {
+        const status = await getUserPlanStatus();
+        const hasAccess = status.isPro || status.credits > 0;
+        
+        if (!hasAccess) {
+          throw new Error('Insufficient credits. Sign up for free to get more credits!');
+        }
+        
+        return { hasAccess, planStatus: status };
+      } else {
+        // Check guest credits
+        let guestCredits = parseInt(localStorage.getItem('guestCredits') || '0');
+        if (guestCredits <= 0) {
+          throw new Error('You have no credits left. Sign up for free to get more credits!');
+        }
+        
+        return { hasAccess: true, planStatus: null };
       }
-      
-      return { hasAccess, planStatus: status };
     } catch (error) {
       throw error;
     }

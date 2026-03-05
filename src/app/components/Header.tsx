@@ -1,7 +1,8 @@
 import { Link, useNavigate } from 'react-router';
 import { supabase } from '../../lib/supabase';
-import { FileText, Shield, Zap, Menu, X, LogOut, User, Settings, Bell } from 'lucide-react';
+import { FileText, Shield, Zap, Menu, X, LogOut, User, Settings, Bell, CreditCard } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { useConversionAccess } from '../../hooks/useConversionAccess';
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -93,70 +94,78 @@ export function Header() {
               Privacy
             </Link>
             {isLoggedIn ? (
-              <div className="relative">
-                <button
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="flex items-center gap-3 px-4 py-2 bg-gray-50 rounded-xl border border-gray-200 hover:bg-gray-100 transition touch-target"
-                >
-                  <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                    <span className="text-white font-medium text-sm">{getInitials(userEmail)}</span>
-                  </div>
-                  <div className="text-left">
-                    <div className="text-sm font-medium text-gray-900">{userEmail}</div>
-                    <div className="text-xs text-gray-500">Account</div>
-                  </div>
-                  <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
+              <div className="flex items-center gap-4">
+                {/* Credits Display */}
+                <div className="flex items-center gap-2 px-3 py-2 bg-green-50 rounded-lg border border-green-200">
+                  <CreditCard className="w-4 h-4 text-green-600" />
+                  <span className="text-sm font-medium text-green-700">Credits: 0</span>
+                </div>
 
-                {isDropdownOpen && (
-                  <div className="absolute right-0 mt-3 w-64 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50">
-                    <Link
-                      to="/dashboard"
-                      className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition touch-target"
-                      onClick={() => setIsDropdownOpen(false)}
-                    >
-                      <Shield className="w-4 h-4 text-blue-600" />
-                      <span>Dashboard</span>
-                    </Link>
-                    <Link
-                      to="/settings/profile"
-                      className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition touch-target"
-                      onClick={() => setIsDropdownOpen(false)}
-                    >
-                      <User className="w-4 h-4 text-blue-600" />
-                      <span>Profile Settings</span>
-                    </Link>
-                    <Link
-                      to="/settings/security"
-                      className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition touch-target"
-                      onClick={() => setIsDropdownOpen(false)}
-                    >
-                      <Shield className="w-4 h-4 text-red-600" />
-                      <span>Security Settings</span>
-                    </Link>
-                    <Link
-                      to="/settings/notifications"
-                      className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition touch-target"
-                      onClick={() => setIsDropdownOpen(false)}
-                    >
-                      <Bell className="w-4 h-4 text-purple-600" />
-                      <span>Notification Preferences</span>
-                    </Link>
-                    <div className="border-t border-gray-200 my-2"></div>
-                    <button
-                      onClick={() => {
-                        handleLogout();
-                        setIsDropdownOpen(false);
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition touch-target"
-                    >
-                      <LogOut className="w-4 h-4 text-red-600" />
-                      <span>Logout</span>
-                    </button>
-                  </div>
-                )}
+                <div className="relative">
+                  <button
+                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                    className="flex items-center gap-3 px-4 py-2 bg-gray-50 rounded-xl border border-gray-200 hover:bg-gray-100 transition touch-target"
+                  >
+                    <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                      <span className="text-white font-medium text-sm">{getInitials(userEmail)}</span>
+                    </div>
+                    <div className="text-left">
+                      <div className="text-sm font-medium text-gray-900">{userEmail}</div>
+                      <div className="text-xs text-gray-500">Account</div>
+                    </div>
+                    <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+
+                  {isDropdownOpen && (
+                    <div className="absolute right-0 mt-3 w-64 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50">
+                      <Link
+                        to="/dashboard"
+                        className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition touch-target"
+                        onClick={() => setIsDropdownOpen(false)}
+                      >
+                        <Shield className="w-4 h-4 text-blue-600" />
+                        <span>Dashboard</span>
+                      </Link>
+                      <Link
+                        to="/settings/profile"
+                        className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition touch-target"
+                        onClick={() => setIsDropdownOpen(false)}
+                      >
+                        <User className="w-4 h-4 text-blue-600" />
+                        <span>Profile Settings</span>
+                      </Link>
+                      <Link
+                        to="/settings/security"
+                        className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition touch-target"
+                        onClick={() => setIsDropdownOpen(false)}
+                      >
+                        <Shield className="w-4 h-4 text-red-600" />
+                        <span>Security Settings</span>
+                      </Link>
+                      <Link
+                        to="/settings/notifications"
+                        className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition touch-target"
+                        onClick={() => setIsDropdownOpen(false)}
+                      >
+                        <Bell className="w-4 h-4 text-purple-600" />
+                        <span>Notification Preferences</span>
+                      </Link>
+                      <div className="border-t border-gray-200 my-2"></div>
+                      <button
+                        onClick={() => {
+                          handleLogout();
+                          setIsDropdownOpen(false);
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition touch-target"
+                      >
+                        <LogOut className="w-4 h-4 text-red-600" />
+                        <span>Logout</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="flex items-center gap-3">

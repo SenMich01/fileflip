@@ -32,16 +32,16 @@ export function FileUpload({ onFileSelect, acceptedFormats = '.pdf,application/p
     if (file) {
       // Check conversion access first
       if (!canConvertFiles) {
-        alert('You need a Pro subscription or credits to convert files. Please upgrade your plan.');
+        alert('You have no credits left. Sign up for free to get more credits!');
         return;
       }
 
-      // Check file size limits based on plan
-      const maxSize = planStatus?.isPro ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
-      const maxSizeMB = planStatus?.isPro ? '100MB' : '10MB';
+      // Check file size limits
+      const maxSize = 10 * 1024 * 1024; // 10MB for all users
+      const maxSizeMB = '10MB';
       
       if (file.size > maxSize) {
-        alert(`File size exceeds ${maxSizeMB} limit for your plan. Please upgrade for larger files.`);
+        alert(`File size exceeds ${maxSizeMB} limit. Please use smaller files.`);
         return;
       }
       
@@ -54,16 +54,16 @@ export function FileUpload({ onFileSelect, acceptedFormats = '.pdf,application/p
     if (file) {
       // Check conversion access first
       if (!canConvertFiles) {
-        alert('You need a Pro subscription or credits to convert files. Please upgrade your plan.');
+        alert('You have no credits left. Sign up for free to get more credits!');
         return;
       }
 
-      // Check file size limits based on plan
-      const maxSize = planStatus?.isPro ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
-      const maxSizeMB = planStatus?.isPro ? '100MB' : '10MB';
+      // Check file size limits
+      const maxSize = 10 * 1024 * 1024; // 10MB for all users
+      const maxSizeMB = '10MB';
       
       if (file.size > maxSize) {
-        alert(`File size exceeds ${maxSizeMB} limit for your plan. Please upgrade for larger files.`);
+        alert(`File size exceeds ${maxSizeMB} limit. Please use smaller files.`);
         return;
       }
       
