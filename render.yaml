@@ -2,7 +2,10 @@ services:
   - type: web
     name: fileflip
     env: node
-    buildCommand: npm install && npm run build
+    buildCommand: |
+      sudo apt update
+      sudo apt install -y libreoffice calibre
+      npm install && npm run build
     startCommand: node server.js
     envVars:
       - key: PORT
