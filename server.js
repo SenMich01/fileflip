@@ -4,15 +4,18 @@ import axios from 'axios';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import multer from 'multer';
 import pdfParse from 'pdf-parse';
 import { Document, Packer } from 'docx';
 import { Paragraph, TextRun } from 'docx';
-import EPub from 'epub';
 import PDFDocument from 'pdfkit';
 import sharp from 'sharp';
 import { PDFDocument as PDFLibDocument } from 'pdf-lib';
 import fsExtra from 'fs-extra';
+
+const execAsync = promisify(exec);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -502,12 +505,52 @@ async function convertPdfToWord(inputPath, outputPath) {
   }
 }
 
-// Helper function to convert EPUB to PDF
+// Helper function to convert EPUB to PDF using Calibre CLI
 async function convertEpubToPdf(inputPath, outputPath) {
-  console.log('Starting EPUB to PDF conversion...');
+  console.log('Starting EPUB to PDF conversion using Calibre...');
   console.log(`Input file size: ${fs.statSync(inputPath).size} bytes`);
   
   const startTime = Date.now();
+  
+  try {
+    // Use Calibre's ebook-convert command
+    const command = `ebook-convert "${inputPath}" "${outputPath}" --pdf-page-margin-top=20 --pdf-page-margin-bottom=20 --pdf-page-margin-left=20 --pdf-page-margin-right=20 --pdf-default-font-size=12 --pdf-mono-font-size=12`;
+    
+    console.log('Executing Calibre command:', command);
+    
+    const { stdout, stderr } = await execAsync(command);
+    
+    // Log Calibre output for debugging
+    if (stdout) console.log('Calibre stdout:', stdout);
+    if (stderr) console.log('Calibre stderr:', stderr);
+    
+    const endTime = Date.now();
+    const fileSize = fs.statSync(outputPath).size;
+    
+    console.log(`EPUB to PDF conversion completed in ${endTime - startTime}ms`);
+    console.log(`Output file size: ${fileSize} bytes`);
+    
+    if (fileSize === 0) {
+      throw new Error('Generated PDF file is empty');
+    }
+    
+    return outputPath;
+  } catch (error) {
+    console.error('EPUB to PDF conversion error:', error);
+    
+    // If Calibre fails, try a basic fallback using pdfkit
+    if (error.code === 127) {
+      console.log('Calibre not found, attempting fallback conversion...');
+      return await convertEpubToPdfFallback(inputPath, outputPath);
+    }
+    
+    throw new Error(`EPUB to PDF conversion failed: ${error.message}`);
+  }
+}
+
+// Fallback EPUB to PDF conversion using pdfkit
+async function convertEpubToPdfFallback(inputPath, outputPath) {
+  console.log('Starting EPUB to PDF fallback conversion...');
   
   try {
     // Create PDF document
@@ -526,72 +569,52 @@ async function convertEpubToPdf(inputPath, outputPath) {
     
     // Add title
     pdfDoc.moveDown();
-    pdfDoc.text('Converted from EPUB', { align: 'center' });
+    pdfDoc.text('Converted from EPUB (Fallback)', { align: 'center' });
     pdfDoc.moveDown(2);
     
-    // Parse EPUB
-    const epub = new EPub(inputPath);
+    // Read EPUB file content (basic text extraction)
+    const epubContent = fs.readFileSync(inputPath, 'utf8');
+    
+    // Basic EPUB parsing - extract text content
+    const textContent = epubContent.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+    const paragraphs = textContent ? textContent.split('\n\n').filter(p => p.trim().length > 0) : ['No text content found in EPUB'];
+    
+    // Add content to PDF
+    paragraphs.forEach((paragraph, index) => {
+      if (index > 0) pdfDoc.moveDown();
+      
+      // Check if we need a new page
+      if (pdfDoc.y > 700) {
+        pdfDoc.addPage();
+      }
+      
+      pdfDoc.text(paragraph.trim(), {
+        lineGap: 2,
+        indent: 20
+      });
+    });
+    
+    pdfDoc.end();
     
     return new Promise((resolve, reject) => {
-      epub.on('end', () => {
-        pdfDoc.end();
+      writeStream.on('finish', () => {
+        const fileSize = fs.statSync(outputPath).size;
         
-        writeStream.on('finish', () => {
-          const endTime = Date.now();
-          const fileSize = fs.statSync(outputPath).size;
-          
-          console.log(`EPUB to PDF conversion completed in ${endTime - startTime}ms`);
-          console.log(`Output file size: ${fileSize} bytes`);
-          
-          if (fileSize === 0) {
-            reject(new Error('Generated PDF file is empty'));
-          } else {
-            resolve(outputPath);
-          }
-        });
+        console.log(`Fallback EPUB to PDF conversion completed`);
+        console.log(`Output file size: ${fileSize} bytes`);
         
-        writeStream.on('error', reject);
+        if (fileSize === 0) {
+          reject(new Error('Generated PDF file is empty'));
+        } else {
+          resolve(outputPath);
+        }
       });
       
-      epub.on('error', reject);
-      
-      epub.on('toc', (toc) => {
-        // Add table of contents
-        pdfDoc.text('Table of Contents', { underline: true });
-        pdfDoc.moveDown();
-        
-        toc.forEach((chapter, index) => {
-          pdfDoc.text(`${index + 1}. ${chapter.title}`, {
-            link: chapter.href,
-            continued: true
-          });
-          pdfDoc.text(' ...');
-          pdfDoc.moveDown(0.5);
-        });
-        
-        pdfDoc.moveDown(2);
-      });
-      
-      epub.on('chapter', (chapter) => {
-        // Add chapter title
-        pdfDoc.text(chapter.title, { underline: true });
-        pdfDoc.moveDown();
-        
-        // Add chapter content (remove HTML tags)
-        const cleanText = chapter.text.replace(/<[^>]*>/g, '');
-        pdfDoc.text(cleanText, {
-          lineGap: 2,
-          indent: 20
-        });
-        
-        pdfDoc.moveDown(2);
-      });
-      
-      epub.parse();
+      writeStream.on('error', reject);
     });
   } catch (error) {
-    console.error('EPUB to PDF conversion error:', error);
-    throw new Error(`EPUB to PDF conversion failed: ${error.message}`);
+    console.error('Fallback EPUB to PDF conversion error:', error);
+    throw new Error(`Fallback EPUB to PDF conversion failed: ${error.message}`);
   }
 }
 

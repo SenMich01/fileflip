@@ -7,7 +7,7 @@ This guide provides instructions for installing LibreOffice and Calibre on Linux
 The FileFlip application requires two key dependencies for high-quality file conversions:
 
 1. **LibreOffice** - For PDF to DOCX conversion
-2. **Calibre** - For EPUB to PDF conversion
+2. **Calibre** - For EPUB to PDF conversion (using ebook-convert CLI)
 
 ## Installation Instructions
 
