@@ -252,10 +252,17 @@ async function checkCredits(req, res, next) {
   // Check Supabase credits for logged in users
   const { data, error } = await supabase
     .from('profiles')
-    .select('credits')
+    .select('credits, email')
     .eq('id', userId)
     .single()
   if (error || !data) return res.status(400).json({ error: 'Could not verify credits' })
+  
+  // Give unlimited conversions to magboyinu14@gmail.com
+  if (data.email === 'magboyinu14@gmail.com') {
+    req.userCredits = 'Unlimited'
+    return next()
+  }
+  
   if (data.credits <= 0) return res.status(403).json({ error: 'No credits remaining. Please upgrade.' })
   req.userCredits = data.credits
   next()
