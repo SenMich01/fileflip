@@ -1,10 +1,10 @@
-import fs from 'fs';
-import path from 'path';
+const fs = require('fs');
+const path = require('path');
 
 /**
  * Temporary file management utility
  */
-export class TempFileManager {
+class TempFileManager {
   static TEMP_DIR = '/tmp/fileflip';
   static UPLOAD_DIR = path.join(this.TEMP_DIR, 'uploads');
   static CONVERTED_DIR = path.join(this.TEMP_DIR, 'converted');
@@ -152,4 +152,4 @@ export class TempFileManager {
 // Initialize temp directories on import
 TempFileManager.init();
 
-export default TempFileManager;
+module.exports = TempFileManager;

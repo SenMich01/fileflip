@@ -1,9 +1,9 @@
-import fs from 'fs';
+const fs = require('fs');
 
 /**
  * File validation utility for conversion system
  */
-export class FileValidator {
+class FileValidator {
   static MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
   static ALLOWED_FORMATS = {
     'application/pdf': ['pdf'],
@@ -161,4 +161,4 @@ export class FileValidator {
   }
 }
 
-export default FileValidator;
+module.exports = FileValidator;

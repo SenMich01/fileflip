@@ -1,28 +1,29 @@
 services:
   - type: web
-    name: fileflip
+    name: fileflip-api
     env: node
-    buildCommand: |
-      sudo apt update
-      sudo apt install -y libreoffice calibre
-      npm install && npm run build
+    buildCommand: apt-get install -y libreoffice calibre && npm install
     startCommand: node server.js
     envVars:
       - key: PORT
         value: 10000
       - key: NODE_ENV
         value: production
+      - key: FRONTEND_URL
+        value: https://fileflip-2.onrender.com
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+
+  - type: static
+    name: fileflip
+    buildCommand: npm run build
+    staticPublishPath: dist
+    envVars:
       - key: VITE_SUPABASE_URL
         sync: false
       - key: VITE_SUPABASE_ANON_KEY
         sync: false
       - key: VITE_API_URL
-        value: https://fileflip.onrender.com
-      - key: SUPABASE_URL
-        sync: false
-      - key: SUPABASE_SERVICE_ROLE_KEY
-        sync: false
-      - key: PAYSTACK_SECRET_KEY
-        sync: false
-      - key: FRONTEND_URL
-        value: https://fileflip.onrender.com
+        value: https://fileflip-api.onrender.com

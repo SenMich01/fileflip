@@ -1,15 +1,15 @@
-import express from 'express';
-import cors from 'cors';
-import axios from 'axios';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import fs from 'fs';
-import conversionRoutes from './src/routes/conversionRoutes.js';
+const express = require('express');
+const cors = require('cors');
+const axios = require('axios');
+const path = require('path');
+const fs = require('fs');
+const conversionRoutes = require('./src/routes/conversionRoutes.js');
 
-const execAsync = promisify(exec);
+const { exec } = require('child_process');
+const execAsync = require('util').promisify(exec);
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const currentFilename = require.main.filename;
+const currentDirname = path.dirname(currentFilename);
 
 // Create temp directories
 const TEMP_DIR = '/tmp/fileflip';
@@ -33,42 +33,17 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Configure multer with disk storage
+const multer = require('multer')
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, UPLOAD_DIR);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  destination: '/tmp',
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + '_' + file.originalname)
   }
-});
-
-const upload = multer({ 
-  storage: storage,
-  limits: {
-    fileSize: 50 * 1024 * 1024 // 50MB limit
-  },
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = {
-      'application/pdf': ['pdf'],
-      'image/jpeg': ['jpg', 'jpeg'],
-      'image/png': ['png'],
-      'image/webp': ['webp'],
-      'application/epub+zip': ['epub'],
-      'application/octet-stream': ['epub'] // Fallback for EPUB
-    };
-    
-    const fileExtension = file.originalname.split('.').pop()?.toLowerCase();
-    const allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'epub'];
-    
-    if (allowedExtensions.includes(fileExtension)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Invalid file type'), false);
-    }
-  }
-});
+})
+const upload = multer({
+  storage,
+  limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit
+})
 
 // Serve static files from dist directory
 app.use(express.static(path.join(__dirname, 'dist')));
@@ -239,7 +214,107 @@ app.post('/api/deduct-credits', async (req, res) => {
   }
 });
 
-// Use the new conversion routes
+// Import conversion services and queue manager
+const { pdfToWord, epubToPdf, imageToPdf } = require('./src/services/conversionService.js');
+const { addToQueue } = require('./src/utils/queueManager.js');
+const { createClient } = require('@supabase/supabase-js');
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
+function sendFile(res, outputPath, filename) {
+  const stats = require('fs').statSync(outputPath)
+  if (stats.size === 0) {
+    return res.status(500).json({ error: 'Conversion produced empty file' })
+  }
+  res.download(outputPath, filename, (err) => {
+    if (err) console.error('Download error:', err)
+    try { require('fs').unlinkSync(outputPath) } catch (e) {}
+  })
+}
+
+// Check and deduct credits middleware
+async function checkCredits(req, res, next) {
+  const userId = req.headers['x-user-id']
+  // If guest user skip Supabase credit check
+  // Credits are handled on frontend via localStorage for guests
+  if (!userId) return next()
+  // Check Supabase credits for logged in users
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('credits')
+    .eq('id', userId)
+    .single()
+  if (error || !data) return res.status(400).json({ error: 'Could not verify credits' })
+  if (data.credits <= 0) return res.status(403).json({ error: 'No credits remaining. Please upgrade.' })
+  req.userCredits = data.credits
+  next()
+}
+
+// Deduct 1 credit after successful conversion
+async function deductCredit(userId) {
+  if (!userId) return
+  const { data } = await supabase
+    .from('profiles')
+    .select('credits')
+    .eq('id', userId)
+    .single()
+  if (data) {
+    await supabase
+      .from('profiles')
+      .update({ credits: data.credits - 1 })
+      .eq('id', userId)
+  }
+}
+
+// PDF to Word conversion route
+app.post('/api/pdf-to-word', upload.single('file'), checkCredits, async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' })
+  try {
+    const outputPath = await addToQueue(() => pdfToWord(req.file.path))
+    await deductCredit(req.headers['x-user-id'])
+    sendFile(res, outputPath, 'converted.docx')
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: err.message })
+  } finally {
+    try { require('fs').unlinkSync(req.file.path) } catch (e) {}
+  }
+})
+
+// EPUB to PDF conversion route
+app.post('/api/epub-to-pdf', upload.single('file'), checkCredits, async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' })
+  try {
+    const outputPath = await addToQueue(() => epubToPdf(req.file.path))
+    await deductCredit(req.headers['x-user-id'])
+    sendFile(res, outputPath, 'converted.pdf')
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: err.message })
+  } finally {
+    try { require('fs').unlinkSync(req.file.path) } catch (e) {}
+  }
+})
+
+// Image to PDF conversion route
+app.post('/api/image-to-pdf', upload.single('file'), checkCredits, async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' })
+  try {
+    const outputPath = await addToQueue(() => imageToPdf(req.file.path))
+    await deductCredit(req.headers['x-user-id'])
+    sendFile(res, outputPath, 'converted.pdf')
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: err.message })
+  } finally {
+    try { require('fs').unlinkSync(req.file.path) } catch (e) {}
+  }
+})
+
+// Use the existing conversion routes
 app.use('/api', conversionRoutes);
 
 // Add all other API routes here

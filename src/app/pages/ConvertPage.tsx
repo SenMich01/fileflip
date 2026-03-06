@@ -45,20 +45,50 @@ export default function ConvertPage() {
     setError('');
 
     try {
+      // Get user ID from localStorage or session
+      const userSession = localStorage.getItem('userSession');
+      const userId = userSession ? JSON.parse(userSession).user?.id : null;
+
       // Create FormData for the file upload
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('targetFormat', targetFormat);
+
+      // Determine the correct API endpoint based on target format
+      let endpoint = '';
+      const fileExtension = file.name.split('.').pop()?.toLowerCase();
+      
+      if (targetFormat === 'docx' && fileExtension === 'pdf') {
+        endpoint = '/api/pdf-to-word';
+      } else if (targetFormat === 'pdf' && fileExtension === 'epub') {
+        endpoint = '/api/epub-to-pdf';
+      } else if (targetFormat === 'pdf' && ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(fileExtension)) {
+        endpoint = '/api/image-to-pdf';
+      } else {
+        // Fallback to the existing conversion route
+        formData.append('targetFormat', targetFormat);
+        endpoint = '/api/convert';
+      }
 
       // Call the backend conversion API
-      const response = await fetch(`${process.env.VITE_API_URL}/api/convert`, {
+      const response = await fetch(`${process.env.VITE_API_URL}${endpoint}`, {
         method: 'POST',
+        headers: {
+          'x-user-id': userId || ''
+        },
         body: formData,
       });
 
       if (response.ok) {
-        const result = await response.json();
-        setConversionResult(result.downloadUrl);
+        // Handle guest credits if user is not logged in
+        if (!userId) {
+          const current = parseInt(localStorage.getItem('guestCredits') || '3', 10);
+          localStorage.setItem('guestCredits', String(current - 1));
+        }
+        
+        // For direct file downloads, the response will be the file itself
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        setConversionResult(url);
       } else {
         const errorData = await response.json();
         setError(errorData.error || 'Conversion failed');

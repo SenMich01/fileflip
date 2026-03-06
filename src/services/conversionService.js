@@ -1,374 +1,70 @@
-import fs from 'fs';
-import path from 'path';
-import pdfParse from 'pdf-parse';
-import { Document, Packer } from 'docx';
-import { Paragraph, TextRun } from 'docx';
-import PDFDocument from 'pdfkit';
-import sharp from 'sharp';
-import { PDFDocument as PDFLibDocument } from 'pdf-lib';
-import { EPub } from 'epub2';
-import TempFileManager from '../utils/tempFileManager.js';
+const { execSync } = require('child_process');
+const fs = require('fs');
+const path = require('path');
+const sharp = require('sharp');
+const { PDFDocument } = require('pdf-lib');
 
-/**
- * Conversion service for file conversions
- */
-export class ConversionService {
-  /**
-   * Convert PDF to DOCX
-   * @param {string} inputPath - Path to input PDF file
-   * @param {string} outputFilename - Desired output filename
-   * @returns {string} Path to converted file
-   */
-  static async convertPdfToDocx(inputPath, outputFilename) {
-    console.log('Starting PDF to DOCX conversion...');
-    console.log(`Input file size: ${TempFileManager.getFileSize(inputPath)} bytes`);
-    
-    const startTime = Date.now();
-    
-    try {
-      // Read PDF file
-      const pdfBuffer = fs.readFileSync(inputPath);
-      
-      // Extract text from PDF using pdf-parse
-      const pdfData = await pdfParse(pdfBuffer);
-      const textContent = pdfData.text || '';
-      
-      console.log(`Extracted text length: ${textContent.length} characters`);
-      
-      if (!textContent.trim()) {
-        throw new Error('No text content found in PDF');
-      }
-      
-      // Split text into paragraphs
-      const paragraphs = textContent.split('\n\n').filter(p => p.trim().length > 0);
-      
-      // Create DOCX document using docx library
-      const doc = new Document({
-        sections: [{
-          properties: {},
-          children: paragraphs.map(paragraph => {
-            return new Paragraph({
-              children: [
-                new TextRun({
-                  text: paragraph.trim(),
-                  font: 'Arial',
-                  size: 24 // 12pt
-                })
-              ],
-              spacing: {
-                after: 120 // 6pt spacing after paragraph
-              }
-            });
-          })
-        }]
-      });
-
-      // Generate DOCX buffer
-      const docxBinary = await Packer.toBuffer(doc);
-      
-      // Save to temp directory
-      const outputPath = TempFileManager.saveConvertedFile(docxBinary, outputFilename);
-      
-      const endTime = Date.now();
-      const fileSize = TempFileManager.getFileSize(outputPath);
-      
-      console.log(`DOCX conversion completed in ${endTime - startTime}ms`);
-      console.log(`Output file size: ${fileSize} bytes`);
-      
-      if (!TempFileManager.isValidFile(outputPath)) {
-        throw new Error('Generated DOCX file is empty or invalid');
-      }
-      
-      return outputPath;
-    } catch (error) {
-      console.error('PDF to DOCX conversion error:', error);
-      throw new Error(`PDF to Word conversion failed: ${error.message}`);
-    }
-  }
-
-  /**
-   * Convert Image to PDF
-   * @param {string} inputPath - Path to input image file
-   * @param {string} outputFilename - Desired output filename
-   * @returns {string} Path to converted file
-   */
-  static async convertImageToPdf(inputPath, outputFilename) {
-    console.log('Starting Image to PDF conversion...');
-    console.log(`Input file size: ${TempFileManager.getFileSize(inputPath)} bytes`);
-    
-    const startTime = Date.now();
-    
-    try {
-      // Process image with sharp
-      const imageBuffer = fs.readFileSync(inputPath);
-      
-      // Convert image to RGB format and ensure proper quality
-      const processedImage = await sharp(imageBuffer)
-        .ensureAlpha()
-        .toColorspace('rgb16')
-        .jpeg({ quality: 90 })
-        .toBuffer();
-
-      // Create PDF with pdf-lib
-      const pdfDoc = await PDFLibDocument.create();
-      
-      // Embed the image based on its format
-      let image;
-      try {
-        image = await pdfDoc.embedJpg(processedImage);
-      } catch (jpgError) {
-        try {
-          image = await pdfDoc.embedPng(processedImage);
-        } catch (pngError) {
-          // Fallback: try to embed as is
-          image = await pdfDoc.embedJpg(imageBuffer);
-        }
-      }
-
-      // Get image dimensions and calculate page size
-      const { width, height } = image.scale(1.0);
-      
-      // Create page with proper dimensions (A4 aspect ratio or image aspect ratio)
-      const pageWidth = Math.min(612, width); // Max width for standard PDF
-      const pageHeight = Math.min(792, height); // Max height for standard PDF
-      
-      const page = pdfDoc.addPage([pageWidth, pageHeight]);
-      
-      // Calculate proper positioning to center the image
-      const margin = 20;
-      const imageWidth = Math.min(width, pageWidth - (margin * 2));
-      const imageHeight = (imageWidth / width) * height;
-      
-      page.drawImage(image, {
-        x: margin,
-        y: pageHeight - imageHeight - margin,
-        width: imageWidth,
-        height: imageHeight,
-      });
-
-      const pdfBuffer = await pdfDoc.save();
-      
-      // Save to temp directory
-      const outputPath = TempFileManager.saveConvertedFile(pdfBuffer, outputFilename);
-      
-      const endTime = Date.now();
-      const fileSize = TempFileManager.getFileSize(outputPath);
-      
-      console.log(`Image to PDF conversion completed in ${endTime - startTime}ms`);
-      console.log(`Output file size: ${fileSize} bytes`);
-      
-      if (!TempFileManager.isValidFile(outputPath)) {
-        throw new Error('Generated PDF file is empty or invalid');
-      }
-      
-      return outputPath;
-    } catch (error) {
-      console.error('Image to PDF conversion error:', error);
-      throw new Error(`Image to PDF conversion failed: ${error.message}`);
-    }
-  }
-
-  /**
-   * Convert EPUB to PDF
-   * @param {string} inputPath - Path to input EPUB file
-   * @param {string} outputFilename - Desired output filename
-   * @returns {string} Path to converted file
-   */
-  static async convertEpubToPdf(inputPath, outputFilename) {
-    console.log('Starting EPUB to PDF conversion...');
-    console.log(`Input file size: ${TempFileManager.getFileSize(inputPath)} bytes`);
-    
-    const startTime = Date.now();
-    
-    try {
-      // Parse EPUB using epub2 library
-      const epub = new EPub(inputPath);
-      
-      return new Promise((resolve, reject) => {
-        epub.on("end", () => {
-          const outputPath = path.join(TempFileManager.CONVERTED_DIR, outputFilename);
-          const writeStream = fs.createWriteStream(outputPath);
-          const pdfDoc = new PDFDocument({
-            size: 'A4',
-            margins: { top: 50, bottom: 50, left: 50, right: 50 }
-          });
-          
-          pdfDoc.pipe(writeStream);
-          
-          // Set up PDF styling
-          pdfDoc.font('Helvetica');
-          pdfDoc.fontSize(12);
-          
-          // Add title
-          pdfDoc.moveDown();
-          pdfDoc.text('Converted from EPUB', { align: 'center' });
-          pdfDoc.moveDown(2);
-          
-          // Add chapters from epub flow
-          if (epub.flow && epub.flow.length > 0) {
-            epub.flow.forEach(item => {
-              if (item.title) {
-                pdfDoc.fontSize(16).text(item.title, { underline: true });
-                pdfDoc.moveDown();
-              }
-              
-              if (item.content) {
-                // Clean HTML content
-                const cleanText = item.content.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
-                if (cleanText) {
-                  pdfDoc.fontSize(12).text(cleanText, {
-                    lineGap: 2,
-                    indent: 20
-                  });
-                }
-              }
-              
-              pdfDoc.moveDown(2);
-              
-              // Check if we need a new page
-              if (pdfDoc.y > 700) {
-                pdfDoc.addPage();
-              }
-            });
-          } else {
-            // Fallback: try to extract content from epub object
-            const content = epub.metadata?.description || epub.metadata?.title || 'No content found';
-            pdfDoc.text(content, {
-              lineGap: 2,
-              indent: 20
-            });
-          }
-          
-          pdfDoc.end();
-        });
-        
-        epub.on("error", (error) => {
-          console.error('EPUB parsing error:', error);
-          reject(new Error(`EPUB parsing failed: ${error.message}`));
-        });
-        
-        epub.on("end", () => {
-          const endTime = Date.now();
-          const outputPath = path.join(TempFileManager.CONVERTED_DIR, outputFilename);
-          const fileSize = TempFileManager.getFileSize(outputPath);
-          
-          console.log(`EPUB to PDF conversion completed in ${endTime - startTime}ms`);
-          console.log(`Output file size: ${fileSize} bytes`);
-          
-          if (!TempFileManager.isValidFile(outputPath)) {
-            reject(new Error('Generated PDF file is empty or invalid'));
-          } else {
-            resolve(outputPath);
-          }
-        });
-        
-        epub.parse();
-      });
-    } catch (error) {
-      console.error('EPUB to PDF conversion error:', error);
-      throw new Error(`EPUB to PDF conversion failed: ${error.message}`);
-    }
-  }
-
-  /**
-   * Convert PDF to Image
-   * @param {string} inputPath - Path to input PDF file
-   * @param {string} outputFilename - Desired output filename
-   * @param {string} format - Output format (jpg or png)
-   * @returns {string} Path to converted file
-   */
-  static async convertPdfToImage(inputPath, outputFilename, format) {
-    console.log(`Starting PDF to ${format.toUpperCase()} conversion...`);
-    console.log(`Input file size: ${TempFileManager.getFileSize(inputPath)} bytes`);
-    
-    const startTime = Date.now();
-    
-    try {
-      // Read PDF file
-      const pdfBuffer = fs.readFileSync(inputPath);
-      
-      // Extract text from PDF
-      const pdfData = await pdfParse(pdfBuffer);
-      const textContent = pdfData.text || '';
-      
-      console.log(`Extracted text length: ${textContent.length} characters`);
-      
-      // Create image with the text content using sharp
-      const text = textContent || 'PDF content extraction failed';
-      
-      // Create a simple image with the text
-      const imageBuffer = await sharp({
-        create: {
-          width: 800,
-          height: 600,
-          channels: 3,
-          background: { r: 255, g: 255, b: 255 }
-        }
-      })
-      .composite([{
-        input: Buffer.from(`<svg width="800" height="600">
-          <rect width="800" height="600" fill="white"/>
-          <text x="20" y="40" font-family="Arial" font-size="14" fill="black">${text}</text>
-        </svg>`),
-        top: 0,
-        left: 0
-      }])
-      .toFormat(format)
-      .toBuffer();
-
-      // Save to temp directory
-      const outputPath = TempFileManager.saveConvertedFile(imageBuffer, outputFilename);
-      
-      const endTime = Date.now();
-      const fileSize = TempFileManager.getFileSize(outputPath);
-      
-      console.log(`PDF to ${format.toUpperCase()} conversion completed in ${endTime - startTime}ms`);
-      console.log(`Output file size: ${fileSize} bytes`);
-      
-      if (!TempFileManager.isValidFile(outputPath)) {
-        throw new Error(`Generated ${format.toUpperCase()} file is empty or invalid`);
-      }
-      
-      return outputPath;
-    } catch (error) {
-      console.error('PDF to image conversion error:', error);
-      throw new Error(`PDF to image conversion failed: ${error.message}`);
-    }
-  }
-
-  /**
-   * Get MIME type for file format
-   * @param {string} format - File format
-   * @returns {string} MIME type
-   */
-  static getMimeType(format) {
-    const mimeTypes = {
-      'pdf': 'application/pdf',
-      'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'jpg': 'image/jpeg',
-      'jpeg': 'image/jpeg',
-      'png': 'image/png'
-    };
-    
-    return mimeTypes[format.toLowerCase()] || 'application/octet-stream';
-  }
-
-  /**
-   * Get file extension from format
-   * @param {string} format - Format name
-   * @returns {string} File extension
-   */
-  static getFileExtension(format) {
-    const extensions = {
-      'pdf': 'pdf',
-      'docx': 'docx',
-      'jpg': 'jpg',
-      'jpeg': 'jpeg',
-      'png': 'png'
-    };
-    
-    return extensions[format.toLowerCase()] || format.toLowerCase();
+// PDF to Word
+async function pdfToWord(inputPath) {
+  try {
+    console.log('Starting PDF to Word conversion...');
+    console.log('Input file size:', fs.statSync(inputPath).size, 'bytes');
+    execSync(`libreoffice --headless --convert-to docx "${inputPath}" --outdir /tmp`, {
+      timeout: 60000
+    });
+    const filename = path.basename(inputPath).replace(/\.pdf$/i, '.docx');
+    const outputPath = `/tmp/${filename}`;
+    if (!fs.existsSync(outputPath)) throw new Error('Output file not created');
+    if (fs.statSync(outputPath).size === 0) throw new Error('Output file is empty');
+    console.log('PDF to Word success. Output size:', fs.statSync(outputPath).size, 'bytes');
+    return outputPath;
+  } catch (err) {
+    throw new Error('PDF to Word failed: ' + err.message);
   }
 }
 
-export default ConversionService;
+// EPUB to PDF
+async function epubToPdf(inputPath) {
+  try {
+    console.log('Starting EPUB to PDF conversion...');
+    console.log('Input file size:', fs.statSync(inputPath).size, 'bytes');
+    const outputPath = `/tmp/converted_${Date.now()}.pdf`;
+    execSync(`ebook-convert "${inputPath}" "${outputPath}"`, {
+      timeout: 60000
+    });
+    if (!fs.existsSync(outputPath)) throw new Error('Output file not created');
+    if (fs.statSync(outputPath).size === 0) throw new Error('Output file is empty');
+    console.log('EPUB to PDF success. Output size:', fs.statSync(outputPath).size, 'bytes');
+    return outputPath;
+  } catch (err) {
+    throw new Error('EPUB to PDF failed: ' + err.message);
+  }
+}
+
+// Image to PDF
+async function imageToPdf(inputPath) {
+  try {
+    console.log('Starting Image to PDF conversion...');
+    console.log('Input file size:', fs.statSync(inputPath).size, 'bytes');
+    const outputPath = `/tmp/converted_${Date.now()}.pdf`;
+    const imageBuffer = await sharp(inputPath).png().toBuffer();
+    const metadata = await sharp(inputPath).metadata();
+    const pdfDoc = await PDFDocument.create();
+    const image = await pdfDoc.embedPng(imageBuffer);
+    const page = pdfDoc.addPage([metadata.width, metadata.height]);
+    page.drawImage(image, {
+      x: 0, y: 0,
+      width: metadata.width,
+      height: metadata.height
+    });
+    const pdfBytes = await pdfDoc.save();
+    fs.writeFileSync(outputPath, Buffer.from(pdfBytes));
+    if (fs.statSync(outputPath).size === 0) throw new Error('Output file is empty');
+    console.log('Image to PDF success. Output size:', fs.statSync(outputPath).size, 'bytes');
+    return outputPath;
+  } catch (err) {
+    throw new Error('Image to PDF failed: ' + err.message);
+  }
+}
+
+module.exports = { pdfToWord, epubToPdf, imageToPdf };

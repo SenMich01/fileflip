@@ -1,14 +1,11 @@
-import express from 'express';
-import multer from 'multer';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import FileValidator from '../utils/fileValidator.js';
-import ConversionService from '../services/conversionService.js';
-import TempFileManager from '../utils/tempFileManager.js';
-import axios from 'axios';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const express = require('express');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+const FileValidator = require('../utils/fileValidator.js');
+const ConversionService = require('../services/conversionService.js');
+const TempFileManager = require('../utils/tempFileManager.js');
+const axios = require('axios');
 
 const router = express.Router();
 
@@ -280,4 +277,4 @@ router.get('/conversion-info', (req, res) => {
   res.json(info);
 });
 
-export default router;
+module.exports = router;
