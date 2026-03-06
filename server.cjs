@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
@@ -219,10 +221,12 @@ const { pdfToWord, epubToPdf, imageToPdf } = require('./src/services/conversionS
 const { addToQueue } = require('./src/utils/queueManager.cjs');
 const { createClient } = require('@supabase/supabase-js');
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+const supabase = (supabaseUrl && supabaseKey)
+  ? createClient(supabaseUrl, supabaseKey)
+  : null;
 
 function sendFile(res, outputPath, filename) {
   const stats = require('fs').statSync(outputPath)
@@ -241,6 +245,10 @@ async function checkCredits(req, res, next) {
   // If guest user skip Supabase credit check
   // Credits are handled on frontend via localStorage for guests
   if (!userId) return next()
+  
+  // If supabase is not initialized, skip Supabase credit check
+  if (!supabase) return next()
+  
   // Check Supabase credits for logged in users
   const { data, error } = await supabase
     .from('profiles')
@@ -255,7 +263,7 @@ async function checkCredits(req, res, next) {
 
 // Deduct 1 credit after successful conversion
 async function deductCredit(userId) {
-  if (!userId) return
+  if (!userId || !supabase) return
   const { data } = await supabase
     .from('profiles')
     .select('credits')
