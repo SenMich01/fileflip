@@ -3,7 +3,7 @@ services:
     name: fileflip-api
     env: node
     buildCommand: apt-get install -y libreoffice calibre && npm install
-    startCommand: node server.js
+    startCommand: node server.cjs
     envVars:
       - key: PORT
         value: 10000

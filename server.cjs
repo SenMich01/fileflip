@@ -3,7 +3,7 @@ const cors = require('cors');
 const axios = require('axios');
 const path = require('path');
 const fs = require('fs');
-const conversionRoutes = require('./src/routes/conversionRoutes.js');
+const conversionRoutes = require('./src/routes/conversionRoutes.cjs');
 
 const { exec } = require('child_process');
 const execAsync = require('util').promisify(exec);
@@ -215,8 +215,8 @@ app.post('/api/deduct-credits', async (req, res) => {
 });
 
 // Import conversion services and queue manager
-const { pdfToWord, epubToPdf, imageToPdf } = require('./src/services/conversionService.js');
-const { addToQueue } = require('./src/utils/queueManager.js');
+const { pdfToWord, epubToPdf, imageToPdf } = require('./src/services/conversionService.cjs');
+const { addToQueue } = require('./src/utils/queueManager.cjs');
 const { createClient } = require('@supabase/supabase-js');
 
 const supabase = createClient(

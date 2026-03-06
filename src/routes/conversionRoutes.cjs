@@ -2,9 +2,9 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const FileValidator = require('../utils/fileValidator.js');
-const ConversionService = require('../services/conversionService.js');
-const TempFileManager = require('../utils/tempFileManager.js');
+const FileValidator = require('../utils/fileValidator.cjs');
+const ConversionService = require('../services/conversionService.cjs');
+const TempFileManager = require('../utils/tempFileManager.cjs');
 const axios = require('axios');
 
 const router = express.Router();
