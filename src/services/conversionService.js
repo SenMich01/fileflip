@@ -6,7 +6,7 @@ import { Paragraph, TextRun } from 'docx';
 import PDFDocument from 'pdfkit';
 import sharp from 'sharp';
 import { PDFDocument as PDFLibDocument } from 'pdf-lib';
-import EPub from 'epub-parser';
+import { EPub } from 'epub2';
 import TempFileManager from '../utils/tempFileManager.js';
 
 /**
@@ -181,88 +181,75 @@ export class ConversionService {
     const startTime = Date.now();
     
     try {
-      // Parse EPUB using epub-parser
-      const epub = await EPub.parse(inputPath);
+      // Parse EPUB using epub2 library
+      const epub = new EPub(inputPath);
       
-      // Create PDF document using pdfkit
-      const pdfDoc = new PDFDocument({
-        size: 'A4',
-        margins: { top: 50, bottom: 50, left: 50, right: 50 }
-      });
-      
-      // Create write stream
-      const outputPath = path.join(TempFileManager.CONVERTED_DIR, outputFilename);
-      const writeStream = fs.createWriteStream(outputPath);
-      pdfDoc.pipe(writeStream);
-      
-      // Set up PDF styling
-      pdfDoc.font('Helvetica');
-      pdfDoc.fontSize(12);
-      
-      // Add title
-      pdfDoc.moveDown();
-      pdfDoc.text('Converted from EPUB', { align: 'center' });
-      pdfDoc.moveDown(2);
-      
-      // Add table of contents if available
-      if (epub.toc && epub.toc.length > 0) {
-        pdfDoc.text('Table of Contents', { underline: true });
-        pdfDoc.moveDown();
-        
-        epub.toc.forEach((chapter, index) => {
-          pdfDoc.text(`${index + 1}. ${chapter.title}`, {
-            link: chapter.href,
-            continued: true
+      return new Promise((resolve, reject) => {
+        epub.on("end", () => {
+          const outputPath = path.join(TempFileManager.CONVERTED_DIR, outputFilename);
+          const writeStream = fs.createWriteStream(outputPath);
+          const pdfDoc = new PDFDocument({
+            size: 'A4',
+            margins: { top: 50, bottom: 50, left: 50, right: 50 }
           });
-          pdfDoc.text(' ...');
-          pdfDoc.moveDown(0.5);
-        });
-        
-        pdfDoc.moveDown(2);
-      }
-      
-      // Add chapters
-      if (epub.chapters && epub.chapters.length > 0) {
-        for (const chapter of epub.chapters) {
-          // Add chapter title
-          if (chapter.title) {
-            pdfDoc.text(chapter.title, { underline: true });
-            pdfDoc.moveDown();
-          }
           
-          // Add chapter content (remove HTML tags)
-          const cleanText = chapter.content ? chapter.content.replace(/<[^>]*>/g, '') : '';
-          if (cleanText.trim()) {
-            pdfDoc.text(cleanText, {
+          pdfDoc.pipe(writeStream);
+          
+          // Set up PDF styling
+          pdfDoc.font('Helvetica');
+          pdfDoc.fontSize(12);
+          
+          // Add title
+          pdfDoc.moveDown();
+          pdfDoc.text('Converted from EPUB', { align: 'center' });
+          pdfDoc.moveDown(2);
+          
+          // Add chapters from epub flow
+          if (epub.flow && epub.flow.length > 0) {
+            epub.flow.forEach(item => {
+              if (item.title) {
+                pdfDoc.fontSize(16).text(item.title, { underline: true });
+                pdfDoc.moveDown();
+              }
+              
+              if (item.content) {
+                // Clean HTML content
+                const cleanText = item.content.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+                if (cleanText) {
+                  pdfDoc.fontSize(12).text(cleanText, {
+                    lineGap: 2,
+                    indent: 20
+                  });
+                }
+              }
+              
+              pdfDoc.moveDown(2);
+              
+              // Check if we need a new page
+              if (pdfDoc.y > 700) {
+                pdfDoc.addPage();
+              }
+            });
+          } else {
+            // Fallback: try to extract content from epub object
+            const content = epub.metadata?.description || epub.metadata?.title || 'No content found';
+            pdfDoc.text(content, {
               lineGap: 2,
               indent: 20
             });
           }
           
-          pdfDoc.moveDown(2);
-          
-          // Check if we need a new page
-          if (pdfDoc.y > 700) {
-            pdfDoc.addPage();
-          }
-        }
-      } else {
-        // Fallback: extract text from all content
-        const allContent = epub.content || '';
-        const cleanText = allContent.replace(/<[^>]*>/g, '');
-        if (cleanText.trim()) {
-          pdfDoc.text(cleanText, {
-            lineGap: 2,
-            indent: 20
-          });
-        }
-      }
-      
-      pdfDoc.end();
-      
-      return new Promise((resolve, reject) => {
-        writeStream.on('finish', () => {
+          pdfDoc.end();
+        });
+        
+        epub.on("error", (error) => {
+          console.error('EPUB parsing error:', error);
+          reject(new Error(`EPUB parsing failed: ${error.message}`));
+        });
+        
+        epub.on("end", () => {
           const endTime = Date.now();
+          const outputPath = path.join(TempFileManager.CONVERTED_DIR, outputFilename);
           const fileSize = TempFileManager.getFileSize(outputPath);
           
           console.log(`EPUB to PDF conversion completed in ${endTime - startTime}ms`);
@@ -275,7 +262,7 @@ export class ConversionService {
           }
         });
         
-        writeStream.on('error', reject);
+        epub.parse();
       });
     } catch (error) {
       console.error('EPUB to PDF conversion error:', error);
