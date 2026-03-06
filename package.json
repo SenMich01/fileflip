@@ -61,6 +61,7 @@
     "docx": "^9.0.0",
     "pdfkit": "^0.13.0",
     "sharp": "^0.34.5",
+    "epub-parser": "^0.3.5",
     "fs-extra": "^11.3.0",
     "react-day-picker": "8.10.1",
     "react-dnd": "16.0.1",
