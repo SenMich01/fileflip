@@ -228,6 +228,9 @@ const supabase = (supabaseUrl && supabaseKey)
   ? createClient(supabaseUrl, supabaseKey)
   : null;
 
+// Make supabase available to routes
+app.locals.supabase = supabase;
+
 function sendFile(res, outputPath, filename) {
   const stats = require('fs').statSync(outputPath)
   if (stats.size === 0) {
