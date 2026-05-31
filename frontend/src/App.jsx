@@ -4,16 +4,14 @@ import { supabase } from "./lib/supabaseClient";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
+import Home from "./pages/Home";
 
 function ProtectedRoute({ session, children }) {
   if (session === undefined) {
-    // Still loading
     return (
-      <div className="gradient-bg min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-2 border-electric-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-white/40 text-sm font-body">Loading...</p>
-        </div>
+      <div style={{ background: "#080e1f", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ width: 36, height: 36, border: "2px solid #3b82f6", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
@@ -25,31 +23,21 @@ export default function App() {
   const [session, setSession] = useState(undefined);
 
   useEffect(() => {
-    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session ?? null);
     });
-
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session ?? null);
     });
-
     return () => subscription.unsubscribe();
   }, []);
 
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Navigate to={session ? "/dashboard" : "/login"} replace />} />
-        <Route
-          path="/login"
-          element={session ? <Navigate to="/dashboard" replace /> : <Login />}
-        />
-        <Route
-          path="/register"
-          element={session ? <Navigate to="/dashboard" replace /> : <Register />}
-        />
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={session ? <Navigate to="/dashboard" replace /> : <Login />} />
+        <Route path="/register" element={session ? <Navigate to="/dashboard" replace /> : <Register />} />
         <Route
           path="/dashboard"
           element={
