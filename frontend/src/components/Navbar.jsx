@@ -13,11 +13,10 @@ export default function Navbar({ session }) {
   };
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-white/5 bg-navy-900/80 backdrop-blur-xl">
+    <nav className="sticky top-0 z-50 border-b border-white/5 bg-slate-900/80 backdrop-blur-xl">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-        {/* Logo */}
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-electric-500 rounded-lg flex items-center justify-center">
+          <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
               <polyline points="14 2 14 8 20 8"/>
@@ -25,14 +24,13 @@ export default function Navbar({ session }) {
               <line x1="9" y1="15" x2="15" y2="15"/>
             </svg>
           </div>
-          <span className="font-display text-lg font-bold text-white tracking-tight">FileFlip</span>
+          <span className="text-lg font-bold text-white tracking-tight">FileFlip</span>
         </div>
 
-        {/* Right side */}
         <div className="flex items-center gap-4">
           <div className="hidden sm:flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full bg-electric-500/20 border border-electric-500/30 flex items-center justify-center">
-              <span className="text-xs font-semibold text-electric-400">
+            <div className="w-7 h-7 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
+              <span className="text-xs font-semibold text-blue-400">
                 {name.charAt(0).toUpperCase()}
               </span>
             </div>
