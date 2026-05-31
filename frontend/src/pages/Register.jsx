@@ -6,7 +6,6 @@ export default function Register() {
   const navigate = useNavigate();
   const [form, setForm] = useState({ fullName: "", email: "", password: "", confirmPassword: "" });
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
@@ -17,7 +16,6 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    setSuccess("");
 
     if (form.password !== form.confirmPassword) {
       setError("Passwords do not match.");
@@ -33,9 +31,7 @@ export default function Register() {
     const { error } = await supabase.auth.signUp({
       email: form.email,
       password: form.password,
-      options: {
-        data: { full_name: form.fullName },
-      },
+      options: { data: { full_name: form.fullName } },
     });
 
     setLoading(false);
@@ -43,7 +39,6 @@ export default function Register() {
     if (error) {
       setError(error.message);
     } else {
-      // Auto-redirect since email confirmation is disabled
       navigate("/dashboard");
     }
   };
@@ -51,10 +46,9 @@ export default function Register() {
   return (
     <div className="gradient-bg min-h-screen flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-md animate-fade-up" style={{ opacity: 0, animationFillMode: "forwards" }}>
-        {/* Logo */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-electric-500 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                 <polyline points="14 2 14 8 20 8"/>
@@ -62,76 +56,38 @@ export default function Register() {
                 <line x1="9" y1="15" x2="15" y2="15"/>
               </svg>
             </div>
-            <span className="font-display text-2xl font-bold text-white tracking-tight">FileFlip</span>
+            <span className="text-2xl font-bold text-white tracking-tight">FileFlip</span>
           </div>
-          <h1 className="font-display text-3xl font-bold text-white mb-2">Create account</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">Create account</h1>
           <p className="text-white/40 text-sm">Start converting files for free</p>
         </div>
 
-        {/* Card */}
         <div className="card p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="label">Full name</label>
-              <input
-                type="text"
-                name="fullName"
-                value={form.fullName}
-                onChange={handleChange}
-                placeholder="John Doe"
-                required
-                className="input-field"
-              />
+              <input type="text" name="fullName" value={form.fullName} onChange={handleChange}
+                placeholder="John Doe" required className="input-field" />
             </div>
-
             <div>
               <label className="label">Email address</label>
-              <input
-                type="email"
-                name="email"
-                value={form.email}
-                onChange={handleChange}
-                placeholder="you@example.com"
-                required
-                className="input-field"
-              />
+              <input type="email" name="email" value={form.email} onChange={handleChange}
+                placeholder="you@example.com" required className="input-field" />
             </div>
-
             <div>
               <label className="label">Password</label>
-              <input
-                type="password"
-                name="password"
-                value={form.password}
-                onChange={handleChange}
-                placeholder="Min. 6 characters"
-                required
-                className="input-field"
-              />
+              <input type="password" name="password" value={form.password} onChange={handleChange}
+                placeholder="Min. 6 characters" required className="input-field" />
             </div>
-
             <div>
               <label className="label">Confirm password</label>
-              <input
-                type="password"
-                name="confirmPassword"
-                value={form.confirmPassword}
-                onChange={handleChange}
-                placeholder="••••••••"
-                required
-                className="input-field"
-              />
+              <input type="password" name="confirmPassword" value={form.confirmPassword} onChange={handleChange}
+                placeholder="••••••••" required className="input-field" />
             </div>
 
             {error && (
               <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
                 <p className="text-red-400 text-sm">{error}</p>
-              </div>
-            )}
-
-            {success && (
-              <div className="bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-3">
-                <p className="text-green-400 text-sm">{success}</p>
               </div>
             )}
 
@@ -151,7 +107,7 @@ export default function Register() {
 
         <p className="text-center text-white/40 text-sm mt-6">
           Already have an account?{" "}
-          <Link to="/login" className="text-electric-400 hover:text-electric-300 font-medium transition-colors">
+          <Link to="/login" className="text-blue-400 hover:text-blue-300 font-medium transition-colors">
             Sign in
           </Link>
         </p>
