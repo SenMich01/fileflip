@@ -3,49 +3,24 @@ import { supabase } from "../lib/supabaseClient";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "";
 
-const CONVERSIONS = {
-  "pdf-to-docx": {
-    label: "PDF → Word",
-    accept: ".pdf",
-    acceptMime: "application/pdf",
-    endpoint: "/api/convert/pdf-to-docx",
-    hint: "Upload a PDF file",
-    outputExt: ".docx",
-  },
-  "docx-to-pdf": {
-    label: "Word → PDF",
-    accept: ".docx,.doc",
-    acceptMime: [
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "application/msword",
-    ],
-    endpoint: "/api/convert/docx-to-pdf",
-    hint: "Upload a DOCX file",
-    outputExt: ".pdf",
-  },
-};
-
 export default function FileUploader({ onConversionComplete }) {
-  const [activeTab, setActiveTab] = useState("pdf-to-docx");
   const [file, setFile] = useState(null);
   const [dragOver, setDragOver] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const inputRef = useRef(null);
-  const conversion = CONVERSIONS[activeTab];
-
-  const resetState = () => { setFile(null); setError(""); setSuccess(""); };
-
-  const handleTabChange = (tab) => { setActiveTab(tab); resetState(); };
 
   const validateFile = useCallback((f) => {
     if (!f) return "No file selected.";
     if (f.size > 20 * 1024 * 1024) return "File too large. Max 20MB.";
-    const accepted = Array.isArray(conversion.acceptMime) ? conversion.acceptMime : [conversion.acceptMime];
-    if (!accepted.includes(f.type)) return `Invalid file type. Expected: ${conversion.accept}`;
+    const validTypes = [
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/msword",
+    ];
+    if (!validTypes.includes(f.type)) return "Please upload a DOCX or DOC file.";
     return null;
-  }, [conversion]);
+  }, []);
 
   const handleDrop = useCallback((e) => {
     e.preventDefault();
@@ -65,6 +40,11 @@ export default function FileUploader({ onConversionComplete }) {
     setFile(selected); setError(""); setSuccess("");
   };
 
+  const resetState = () => {
+    setFile(null); setError(""); setSuccess("");
+    if (inputRef.current) inputRef.current.value = "";
+  };
+
   const handleConvert = async () => {
     if (!file) { setError("Please select a file first."); return; }
     setLoading(true); setError(""); setSuccess("");
@@ -76,7 +56,7 @@ export default function FileUploader({ onConversionComplete }) {
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await fetch(`${BACKEND_URL}${conversion.endpoint}`, {
+      const res = await fetch(`${BACKEND_URL}/api/convert/docx-to-pdf`, {
         method: "POST",
         headers: { Authorization: `Bearer ${session.access_token}` },
         body: formData,
@@ -89,7 +69,7 @@ export default function FileUploader({ onConversionComplete }) {
 
       const blob = await res.blob();
       const baseName = file.name.replace(/\.[^/.]+$/, "");
-      const downloadName = `${baseName}${conversion.outputExt}`;
+      const downloadName = `${baseName}.pdf`;
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url; a.download = downloadName;
@@ -108,24 +88,23 @@ export default function FileUploader({ onConversionComplete }) {
   };
 
   const formatSize = (bytes) => {
-    if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   return (
     <div className="card p-6 sm:p-8">
-      <h2 className="text-xl font-bold text-white mb-6">Convert a File</h2>
-
-      <div className="flex gap-2 mb-6 p-1 bg-white/5 rounded-xl">
-        {Object.entries(CONVERSIONS).map(([key, val]) => (
-          <button key={key} onClick={() => handleTabChange(key)}
-            className={`flex-1 py-2.5 px-3 rounded-lg text-sm font-medium transition-all duration-200 ${
-              activeTab === key ? "bg-blue-500 text-white shadow-lg" : "text-white/40 hover:text-white/70"
-            }`}>
-            {val.label}
-          </button>
-        ))}
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-10 h-10 bg-blue-500/10 border border-blue-500/20 rounded-xl flex items-center justify-center">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+          </svg>
+        </div>
+        <div>
+          <h2 className="text-xl font-bold text-white">Word to PDF</h2>
+          <p className="text-xs text-white/30 mt-0.5">Convert DOCX files to print-ready PDF</p>
+        </div>
       </div>
 
       <div
@@ -135,7 +114,7 @@ export default function FileUploader({ onConversionComplete }) {
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
       >
-        <input ref={inputRef} type="file" accept={conversion.accept}
+        <input ref={inputRef} type="file" accept=".docx,.doc"
           onChange={handleFileChange} className="hidden" />
 
         {file ? (
@@ -150,7 +129,7 @@ export default function FileUploader({ onConversionComplete }) {
               <p className="text-white font-medium text-sm truncate max-w-[240px]">{file.name}</p>
               <p className="text-white/30 text-xs mt-0.5">{formatSize(file.size)}</p>
             </div>
-            <button onClick={(e) => { e.stopPropagation(); resetState(); if (inputRef.current) inputRef.current.value = ""; }}
+            <button onClick={(e) => { e.stopPropagation(); resetState(); }}
               className="text-xs text-white/30 hover:text-white/60 transition-colors mt-1">
               Remove file
             </button>
@@ -168,7 +147,7 @@ export default function FileUploader({ onConversionComplete }) {
               <p className="text-white/50 text-sm">
                 <span className="text-blue-400 font-medium">Click to browse</span> or drag & drop
               </p>
-              <p className="text-white/25 text-xs mt-1">{conversion.hint} · Max 20MB</p>
+              <p className="text-white/25 text-xs mt-1">DOCX or DOC file · Max 20MB</p>
             </div>
           </div>
         )}
