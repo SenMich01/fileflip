@@ -10,6 +10,7 @@ const TABS = [
   {
     id: "convert",
     label: "Word → PDF",
+    shortLabel: "Word→PDF",
     color: "blue",
     icon: (
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -21,6 +22,7 @@ const TABS = [
   {
     id: "ocr",
     label: "Image → Text",
+    shortLabel: "Img→Text",
     color: "purple",
     icon: (
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -33,6 +35,7 @@ const TABS = [
   {
     id: "compress",
     label: "Compress Image",
+    shortLabel: "Compress",
     color: "green",
     icon: (
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -45,6 +48,7 @@ const TABS = [
   {
     id: "text-to-pdf",
     label: "Text → PDF",
+    shortLabel: "Text→PDF",
     color: "amber",
     icon: (
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -77,44 +81,46 @@ export default function Dashboard({ session }) {
     session?.user?.email?.split("@")[0] ||
     "there";
 
-  const activeTabData = TABS.find((t) => t.id === activeTab);
-
   return (
-    <div className="gradient-bg min-h-screen">
+    <div className="gradient-bg min-h-screen min-h-dvh">
       <Navbar session={session} />
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10 pb-10">
         {/* Header */}
-        <div className="mb-8 animate-fade-up" style={{ opacity: 0, animationFillMode: "forwards" }}>
-          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-1.5 sm:mb-2">
             Hey, {name} 👋
           </h1>
-          <p className="text-white/40">Your all-in-one document toolkit.</p>
+          <p className="text-sm sm:text-base text-white/40">
+            Your all-in-one document toolkit.
+          </p>
         </div>
 
-        {/* Tabs */}
-        <div className="flex flex-wrap gap-2 mb-8 p-1 bg-white/5 border border-white/8 rounded-2xl w-full sm:w-fit animate-fade-up stagger-1"
-          style={{ opacity: 0, animationFillMode: "forwards" }}>
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
-                activeTab === tab.id
-                  ? TAB_ACTIVE_STYLES[tab.color]
-                  : "text-white/40 hover:text-white/70"
-              }`}
-            >
-              {tab.icon}
-              <span className="hidden sm:inline">{tab.label}</span>
-            </button>
-          ))}
+        {/* Tabs — horizontally scrollable on mobile */}
+        <div className="mb-6 sm:mb-8 -mx-4 sm:mx-0 px-4 sm:px-0">
+          <div className="flex gap-2 p-1 bg-white/5 border border-white/8 rounded-2xl w-max min-w-full sm:min-w-0 sm:w-fit overflow-x-auto">
+            {TABS.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all duration-200 whitespace-nowrap touch-manipulation shrink-0 ${
+                  activeTab === tab.id
+                    ? TAB_ACTIVE_STYLES[tab.color]
+                    : "text-white/40 hover:text-white/70 active:text-white/90"
+                }`}
+              >
+                {tab.icon}
+                <span className="sm:hidden">{tab.shortLabel}</span>
+                <span className="hidden sm:inline">{tab.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Main content */}
-        <div className="grid lg:grid-cols-5 gap-6">
+        {/* Main content — stacked on mobile, side by side on desktop */}
+        <div className="flex flex-col lg:grid lg:grid-cols-5 gap-5 sm:gap-6">
           {/* Tool panel */}
-          <div className="lg:col-span-2 animate-fade-up stagger-2" style={{ opacity: 0, animationFillMode: "forwards" }}>
+          <div className="w-full lg:col-span-2">
             {activeTab === "convert" && <FileUploader onConversionComplete={handleConversionComplete} />}
             {activeTab === "ocr" && <ImageToText onConversionComplete={handleConversionComplete} />}
             {activeTab === "compress" && <ImageCompressor onConversionComplete={handleConversionComplete} />}
@@ -122,7 +128,7 @@ export default function Dashboard({ session }) {
           </div>
 
           {/* History */}
-          <div className="lg:col-span-3 animate-fade-up stagger-3" style={{ opacity: 0, animationFillMode: "forwards" }}>
+          <div className="w-full lg:col-span-3">
             <ConversionHistory ref={historyRef} />
           </div>
         </div>
