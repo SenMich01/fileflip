@@ -4,10 +4,11 @@ const path = require("path");
 const fs = require("fs");
 const os = require("os");
 const { createClient } = require("@supabase/supabase-js");
-const pdfParse = require("pdf-parse");
 const mammoth = require("mammoth");
 const puppeteer = require("puppeteer");
-const { Document, Packer, Paragraph, TextRun, HeadingLevel } = require("docx");
+const sharp = require("sharp");
+const { PDFDocument, rgb, StandardFonts } = require("pdf-lib");
+const { Document, Packer, Paragraph, TextRun } = require("docx");
 const { v4: uuidv4 } = require("uuid");
 const authMiddleware = require("../middleware/auth");
 
@@ -18,7 +19,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// Multer config
+// Multer - general files
 const upload = multer({
   dest: os.tmpdir(),
   limits: { fileSize: 20 * 1024 * 1024 },
@@ -27,11 +28,16 @@ const upload = multer({
       "application/pdf",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       "application/msword",
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/webp",
+      "text/plain",
     ];
     if (allowed.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error("Invalid file type. Only PDF and DOCX files are allowed."));
+      cb(new Error("Invalid file type."));
     }
   },
 });
@@ -66,77 +72,6 @@ async function logConversion(userId, originalName, convertedName, type, sizeKb, 
   if (error) console.warn("DB log warning:", error.message);
 }
 
-// ── POST /api/convert/pdf-to-docx ─────────────────────────────────────────
-router.post("/pdf-to-docx", authMiddleware, upload.single("file"), async (req, res) => {
-  const tempInputPath = req.file?.path;
-
-  try {
-    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
-    if (req.file.mimetype !== "application/pdf") {
-      cleanup(tempInputPath);
-      return res.status(400).json({ error: "File must be a PDF" });
-    }
-
-    const originalName = req.file.originalname;
-    const baseName = path.basename(originalName, ".pdf");
-    const convertedName = `${baseName}.docx`;
-    const sizeKb = Math.round(req.file.size / 1024);
-
-    // Parse PDF
-    const pdfBuffer = fs.readFileSync(tempInputPath);
-    const pdfData = await pdfParse(pdfBuffer);
-    const rawText = pdfData.text || "";
-
-    // Build DOCX
-    const lines = rawText.split("\n").filter((l) => l.trim().length > 0);
-    const docChildren = lines.length > 0
-      ? lines.map((line, i) => {
-          const trimmed = line.trim();
-          if (i === 0) {
-            return new Paragraph({
-              heading: HeadingLevel.HEADING_1,
-              children: [new TextRun({ text: trimmed, bold: true })],
-            });
-          }
-          return new Paragraph({
-            children: [new TextRun({ text: trimmed })],
-            spacing: { after: 120 },
-          });
-        })
-      : [new Paragraph({ children: [new TextRun({ text: "No text could be extracted from this PDF." })] })];
-
-    const doc = new Document({
-      creator: "FileFlip",
-      title: baseName,
-      sections: [{ properties: {}, children: docChildren }],
-    });
-
-    const docxBuffer = await Packer.toBuffer(doc);
-
-    // Upload to storage (non-blocking)
-    uploadToStorage(pdfBuffer, req.user.id, originalName).catch(console.warn);
-    uploadToStorage(docxBuffer, req.user.id, convertedName).catch(console.warn);
-
-    // Log to DB
-    await logConversion(req.user.id, originalName, convertedName, "pdf-to-docx", sizeKb, "success");
-
-    // Send file
-    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
-    res.setHeader("Content-Disposition", `attachment; filename="${convertedName}"`);
-    res.send(docxBuffer);
-
-  } catch (err) {
-    console.error("PDF to DOCX error:", err);
-    if (req.file) {
-      await logConversion(req.user?.id, req.file.originalname, "", "pdf-to-docx",
-        Math.round((req.file.size || 0) / 1024), "failed").catch(() => {});
-    }
-    res.status(500).json({ error: "Conversion failed", message: err.message });
-  } finally {
-    cleanup(tempInputPath);
-  }
-});
-
 // ── POST /api/convert/docx-to-pdf ─────────────────────────────────────────
 router.post("/docx-to-pdf", authMiddleware, upload.single("file"), async (req, res) => {
   const tempInputPath = req.file?.path;
@@ -159,14 +94,12 @@ router.post("/docx-to-pdf", authMiddleware, upload.single("file"), async (req, r
     const convertedName = `${baseName}.pdf`;
     const sizeKb = Math.round(req.file.size / 1024);
 
-    // Copy to .docx path so mammoth can read it
     tempDocxPath = path.join(os.tmpdir(), `${uuidv4()}.docx`);
     fs.copyFileSync(tempInputPath, tempDocxPath);
 
-    // Step 1: Convert DOCX to HTML using mammoth
+    // DOCX → HTML
     const { value: html } = await mammoth.convertToHtml({ path: tempDocxPath });
 
-    // Step 2: Wrap HTML in a styled page
     const styledHtml = `
       <!DOCTYPE html>
       <html>
@@ -180,7 +113,6 @@ router.post("/docx-to-pdf", authMiddleware, upload.single("file"), async (req, r
               line-height: 1.6;
               color: #000;
               padding: 72px;
-              max-width: 100%;
             }
             h1 { font-size: 18pt; margin-bottom: 12pt; margin-top: 16pt; }
             h2 { font-size: 16pt; margin-bottom: 10pt; margin-top: 14pt; }
@@ -193,48 +125,41 @@ router.post("/docx-to-pdf", authMiddleware, upload.single("file"), async (req, r
             li { margin-bottom: 4pt; }
             strong, b { font-weight: bold; }
             em, i { font-style: italic; }
-            u { text-decoration: underline; }
-            img { max-width: 100%; }
           </style>
         </head>
         <body>${html}</body>
       </html>
     `;
 
-    // Step 3: Convert HTML to PDF using Puppeteer
+    // HTML → PDF via Puppeteer
     const browser = await puppeteer.launch({
       headless: "new",
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || null,
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
         "--disable-gpu",
+        "--no-first-run",
+        "--no-zygote",
+        "--single-process",
       ],
     });
 
     const page = await browser.newPage();
     await page.setContent(styledHtml, { waitUntil: "networkidle0" });
-
     const pdfBuffer = await page.pdf({
       format: "A4",
       margin: { top: "72px", right: "72px", bottom: "72px", left: "72px" },
       printBackground: true,
     });
-
     await browser.close();
 
-    // Read original for storage upload
     const docxBuffer = fs.readFileSync(tempDocxPath);
-
-    // Upload to storage (non-blocking)
     uploadToStorage(docxBuffer, req.user.id, originalName).catch(console.warn);
     uploadToStorage(Buffer.from(pdfBuffer), req.user.id, convertedName).catch(console.warn);
 
-    // Log to DB
     await logConversion(req.user.id, originalName, convertedName, "docx-to-pdf", sizeKb, "success");
 
-    // Send file
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${convertedName}"`);
     res.send(Buffer.from(pdfBuffer));
@@ -251,4 +176,165 @@ router.post("/docx-to-pdf", authMiddleware, upload.single("file"), async (req, r
   }
 });
 
-module.exports = router;
+// ── POST /api/convert/compress-image ──────────────────────────────────────
+router.post("/compress-image", authMiddleware, upload.single("file"), async (req, res) => {
+  const tempInputPath = req.file?.path;
+
+  try {
+    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+
+    const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    if (!validTypes.includes(req.file.mimetype)) {
+      cleanup(tempInputPath);
+      return res.status(400).json({ error: "File must be JPG, PNG or WEBP" });
+    }
+
+    const originalName = req.file.originalname;
+    const ext = path.extname(originalName).toLowerCase();
+    const baseName = path.basename(originalName, ext);
+    const convertedName = `${baseName}_compressed${ext}`;
+    const sizeKb = Math.round(req.file.size / 1024);
+
+    // Get quality from request or default to 75
+    const quality = parseInt(req.body.quality) || 75;
+
+    let compressedBuffer;
+    const imageProcessor = sharp(tempInputPath);
+
+    if (ext === ".jpg" || ext === ".jpeg" || req.file.mimetype === "image/jpeg") {
+      compressedBuffer = await imageProcessor
+        .jpeg({ quality, mozjpeg: true })
+        .toBuffer();
+    } else if (ext === ".png" || req.file.mimetype === "image/png") {
+      compressedBuffer = await imageProcessor
+        .png({ quality, compressionLevel: 9 })
+        .toBuffer();
+    } else {
+      compressedBuffer = await imageProcessor
+        .webp({ quality })
+        .toBuffer();
+    }
+
+    const originalBuffer = fs.readFileSync(tempInputPath);
+    const compressedSizeKb = Math.round(compressedBuffer.length / 1024);
+    const savedPercent = Math.round(((sizeKb - compressedSizeKb) / sizeKb) * 100);
+
+    uploadToStorage(originalBuffer, req.user.id, originalName).catch(console.warn);
+    uploadToStorage(compressedBuffer, req.user.id, convertedName).catch(console.warn);
+
+    await logConversion(req.user.id, originalName, convertedName, "compress-image", sizeKb, "success");
+
+    // Send back compression stats in headers
+    res.setHeader("X-Original-Size", sizeKb);
+    res.setHeader("X-Compressed-Size", compressedSizeKb);
+    res.setHeader("X-Saved-Percent", savedPercent);
+    res.setHeader("Access-Control-Expose-Headers", "X-Original-Size, X-Compressed-Size, X-Saved-Percent");
+
+    const mimeTypes = {
+      ".jpg": "image/jpeg",
+      ".jpeg": "image/jpeg",
+      ".png": "image/png",
+      ".webp": "image/webp",
+    };
+    res.setHeader("Content-Type", mimeTypes[ext] || "image/jpeg");
+    res.setHeader("Content-Disposition", `attachment; filename="${convertedName}"`);
+    res.send(compressedBuffer);
+
+  } catch (err) {
+    console.error("Image compress error:", err);
+    if (req.file) {
+      await logConversion(req.user?.id, req.file.originalname, "", "compress-image",
+        Math.round((req.file.size || 0) / 1024), "failed").catch(() => {});
+    }
+    res.status(500).json({ error: "Compression failed", message: err.message });
+  } finally {
+    cleanup(tempInputPath);
+  }
+});
+
+// ── POST /api/convert/text-to-pdf ──────────────────────────────────────────
+router.post("/text-to-pdf", authMiddleware, async (req, res) => {
+  try {
+    const { text, filename, fontSize, fontStyle } = req.body;
+
+    if (!text || text.trim().length === 0) {
+      return res.status(400).json({ error: "No text provided" });
+    }
+
+    const baseName = filename?.replace(/[^a-z0-9_\-]/gi, "_") || "document";
+    const convertedName = `${baseName}.pdf`;
+    const sizeKb = Math.round(Buffer.byteLength(text, "utf8") / 1024) || 1;
+
+    // Create PDF
+    const pdfDoc = await PDFDocument.create();
+    const font = await pdfDoc.embedFont(
+      fontStyle === "courier" ? StandardFonts.Courier :
+      fontStyle === "helvetica" ? StandardFonts.Helvetica :
+      StandardFonts.TimesRoman
+    );
+
+    const size = parseInt(fontSize) || 12;
+    const pageWidth = 595.28;  // A4
+    const pageHeight = 841.89; // A4
+    const margin = 72;
+    const lineHeight = size * 1.4;
+    const maxWidth = pageWidth - margin * 2;
+
+    // Word wrap function
+    function wrapText(text, font, size, maxWidth) {
+      const paragraphs = text.split("\n");
+      const lines = [];
+
+      for (const para of paragraphs) {
+        if (para.trim() === "") {
+          lines.push("");
+          continue;
+        }
+        const words = para.split(" ");
+        let currentLine = "";
+
+        for (const word of words) {
+          const testLine = currentLine ? `${currentLine} ${word}` : word;
+          const testWidth = font.widthOfTextAtSize(testLine, size);
+          if (testWidth > maxWidth && currentLine) {
+            lines.push(currentLine);
+            currentLine = word;
+          } else {
+            currentLine = testLine;
+          }
+        }
+        if (currentLine) lines.push(currentLine);
+      }
+      return lines;
+    }
+
+    const allLines = wrapText(text, font, size, maxWidth);
+
+    // Paginate
+    let currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+    let y = pageHeight - margin;
+
+    for (const line of allLines) {
+      if (y - lineHeight < margin) {
+        currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+        y = pageHeight - margin;
+      }
+
+      if (line !== "") {
+        currentPage.drawText(line, {
+          x: margin,
+          y,
+          size,
+          font,
+          color: rgb(0, 0, 0),
+        });
+      }
+      y -= lineHeight;
+    }
+
+    const pdfBytes = await pdfDoc.save();
+    const pdfBuffer = Buffer.from(pdfBytes);
+
+    uploadToStorage(pdfBuffer, req.user.id, convertedName).catch(console.warn);
+
+    await logConversion(req.user.id, `${baseName}.txt`, convertedName, "text-to-pdf", sizeKb, "success")
