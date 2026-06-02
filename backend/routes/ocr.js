@@ -5,6 +5,7 @@ const fs = require("fs");
 const os = require("os");
 const { createClient } = require("@supabase/supabase-js");
 const { createWorker } = require("tesseract.js");
+const sharp = require("sharp");
 const { Document, Packer, Paragraph, TextRun, HeadingLevel } = require("docx");
 const { v4: uuidv4 } = require("uuid");
 const authMiddleware = require("../middleware/auth");
@@ -78,9 +79,17 @@ router.post("/image-to-text", authMiddleware, upload.single("file"), async (req,
     const convertedName = `${baseName}_extracted.docx`;
     const sizeKb = Math.round(req.file.size / 1024);
 
+    // Preprocess image with sharp
+    const preprocessedImageBuffer = await sharp(tempInputPath)
+      .grayscale()
+      .normalize()
+      .resize({ width: 1500 })
+      .png()
+      .toBuffer();
+
     // Run Tesseract OCR
     worker = await createWorker("eng");
-    const { data: { text } } = await worker.recognize(tempInputPath);
+    const { data: { text } } = await worker.recognize(preprocessedImageBuffer);
     await worker.terminate();
     worker = null;
 
