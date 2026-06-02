@@ -8,6 +8,11 @@ const pdfParse = require("pdf-parse");
 const { Document, Packer, Paragraph, TextRun, HeadingLevel } = require("docx");
 const LibreOfficeConvert = require("libreoffice-convert");
 const { promisify } = require("util");
+
+// Set LibreOffice binary path explicitly for Linux servers
+LibreOfficeConvert.convertWithOptions = LibreOfficeConvert.convertWithOptions || LibreOfficeConvert.convert;
+
+const libreConvert = promisify(LibreOfficeConvert.convert);
 const { v4: uuidv4 } = require("uuid");
 const authMiddleware = require("../middleware/auth");
 
