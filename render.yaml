@@ -1,3 +1,40 @@
+
+Turn on browser notifications when tasks complete.
+
+
+Upgrade
+
+Share
+Lite
+I have resolved the dependency conflict that caused your Render build to fail.
+What was fixed:
+Dependency Version Locking: I have explicitly locked puppeteer-core and chrome-aws-lambda to versions that are known to be compatible with each other (10.1.0). This prevents the ERESOLVE error you encountered.
+Clean Installation: By pinning these versions in package.json, Render will now be able to build your application without manual intervention or the --force flag.
+OCR Improvements: The previously implemented image preprocessing with sharp remains in ocr.js to ensure high-quality text extraction.
+How to fix your repository:
+Replace your backend/package.json with the one attached.
+Replace your backend/routes/convert.js and backend/routes/ocr.js with the attached versions.
+Commit and push these changes to your GitHub repository.
+Trigger a new deploy on Render.
+The build should now complete successfully, and both Word-to-PDF and Image-to-Text features will be fully operational.
+package.json
+Code · 702 B
+convert.js
+Code · 8.67 KB
+ocr.js
+Code · 5.37 KB
+View all files in this task
+Task completed
+How was this result?
+Suggested follow-ups
+
+
+
+
+All files in this task
+Today
+
+render.yaml
 services:
   # ── Backend ──────────────────────────────────────────────────────────────
   - type: web
@@ -39,3 +76,4 @@ services:
       - type: rewrite
         source: /*
         destination: /index.html
+Fixing Word to PDF and Image to Text Issues - Manus
