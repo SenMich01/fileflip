@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "postinstall": "which soffice || echo 'LibreOffice not found - install manually'"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",
