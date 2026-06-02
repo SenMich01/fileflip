@@ -6,7 +6,8 @@ const os = require("os");
 const { createClient } = require("@supabase/supabase-js");
 const pdfParse = require("pdf-parse");
 const mammoth = require("mammoth");
-const puppeteer = require("puppeteer");
+const puppeteer = require("puppeteer-core");
+const chromium = require("chrome-aws-lambda");
 const { Document, Packer, Paragraph, TextRun, HeadingLevel } = require("docx");
 const { v4: uuidv4 } = require("uuid");
 const authMiddleware = require("../middleware/auth");
@@ -203,16 +204,9 @@ router.post("/docx-to-pdf", authMiddleware, upload.single("file"), async (req, r
 
     // Step 3: Convert HTML to PDF using Puppeteer
     const browser = await puppeteer.launch({
-      headless: "new",
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-gpu",
-        "--no-first-run",
-        "--no-zygote",
-        "--single-process",
-      ],
+      args: chromium.args,
+      executablePath: await chromium.executablePath,
+      headless: chromium.headless,
     });
 
     const page = await browser.newPage();
