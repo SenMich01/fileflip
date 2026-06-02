@@ -9,7 +9,6 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",
-    "chrome-aws-lambda": "10.1.0",
     "cors": "^2.8.5",
     "docx": "^8.5.0",
     "dotenv": "^16.3.1",
@@ -17,7 +16,7 @@
     "mammoth": "^1.7.0",
     "multer": "^1.4.5-lts.1",
     "pdf-parse": "^1.1.1",
-    "puppeteer-core": "10.1.0",
+    "puppeteer": "^21.0.0",
     "sharp": "^0.33.0",
     "tesseract.js": "^5.0.4",
     "uuid": "^9.0.0"
