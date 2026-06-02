@@ -16,7 +16,8 @@
     "pdf-parse": "^1.1.1",
     "docx": "^8.5.0",
     "libreoffice-convert": "^1.5.1",
-    "uuid": "^9.0.0"
+    "uuid": "^9.0.0",
+    "tesseract.js": "^5.0.4"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"
