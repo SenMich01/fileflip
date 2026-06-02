@@ -19,7 +19,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// Multer - general files
+// Multer
 const upload = multer({
   dest: os.tmpdir(),
   limits: { fileSize: 20 * 1024 * 1024 },
@@ -72,6 +72,17 @@ async function logConversion(userId, originalName, convertedName, type, sizeKb, 
   if (error) console.warn("DB log warning:", error.message);
 }
 
+// ── GET /api/convert (health check for routes) ────────────────────────────
+router.get("/", (req, res) => {
+  res.json({
+    routes: [
+      "POST /api/convert/docx-to-pdf",
+      "POST /api/convert/compress-image",
+      "POST /api/convert/text-to-pdf",
+    ],
+  });
+});
+
 // ── POST /api/convert/docx-to-pdf ─────────────────────────────────────────
 router.post("/docx-to-pdf", authMiddleware, upload.single("file"), async (req, res) => {
   const tempInputPath = req.file?.path;
@@ -97,7 +108,6 @@ router.post("/docx-to-pdf", authMiddleware, upload.single("file"), async (req, r
     tempDocxPath = path.join(os.tmpdir(), `${uuidv4()}.docx`);
     fs.copyFileSync(tempInputPath, tempDocxPath);
 
-    // DOCX → HTML
     const { value: html } = await mammoth.convertToHtml({ path: tempDocxPath });
 
     const styledHtml = `
@@ -131,7 +141,6 @@ router.post("/docx-to-pdf", authMiddleware, upload.single("file"), async (req, r
       </html>
     `;
 
-    // HTML → PDF via Puppeteer
     const browser = await puppeteer.launch({
       headless: "new",
       args: [
@@ -194,8 +203,6 @@ router.post("/compress-image", authMiddleware, upload.single("file"), async (req
     const baseName = path.basename(originalName, ext);
     const convertedName = `${baseName}_compressed${ext}`;
     const sizeKb = Math.round(req.file.size / 1024);
-
-    // Get quality from request or default to 75
     const quality = parseInt(req.body.quality) || 75;
 
     let compressedBuffer;
@@ -215,28 +222,22 @@ router.post("/compress-image", authMiddleware, upload.single("file"), async (req
         .toBuffer();
     }
 
-    const originalBuffer = fs.readFileSync(tempInputPath);
     const compressedSizeKb = Math.round(compressedBuffer.length / 1024);
-    const savedPercent = Math.round(((sizeKb - compressedSizeKb) / sizeKb) * 100);
+    const savedPercent = Math.max(0, Math.round(((sizeKb - compressedSizeKb) / sizeKb) * 100));
 
+    const originalBuffer = fs.readFileSync(tempInputPath);
     uploadToStorage(originalBuffer, req.user.id, originalName).catch(console.warn);
     uploadToStorage(compressedBuffer, req.user.id, convertedName).catch(console.warn);
 
     await logConversion(req.user.id, originalName, convertedName, "compress-image", sizeKb, "success");
 
-    // Send back compression stats in headers
-    res.setHeader("X-Original-Size", sizeKb);
-    res.setHeader("X-Compressed-Size", compressedSizeKb);
-    res.setHeader("X-Saved-Percent", savedPercent);
+    res.setHeader("X-Original-Size", String(sizeKb));
+    res.setHeader("X-Compressed-Size", String(compressedSizeKb));
+    res.setHeader("X-Saved-Percent", String(savedPercent));
     res.setHeader("Access-Control-Expose-Headers", "X-Original-Size, X-Compressed-Size, X-Saved-Percent");
 
-    const mimeTypes = {
-      ".jpg": "image/jpeg",
-      ".jpeg": "image/jpeg",
-      ".png": "image/png",
-      ".webp": "image/webp",
-    };
-    res.setHeader("Content-Type", mimeTypes[ext] || "image/jpeg");
+    const mimeMap = { ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp" };
+    res.setHeader("Content-Type", mimeMap[ext] || "image/jpeg");
     res.setHeader("Content-Disposition", `attachment; filename="${convertedName}"`);
     res.send(compressedBuffer);
 
@@ -261,11 +262,10 @@ router.post("/text-to-pdf", authMiddleware, async (req, res) => {
       return res.status(400).json({ error: "No text provided" });
     }
 
-    const baseName = filename?.replace(/[^a-z0-9_\-]/gi, "_") || "document";
+    const baseName = (filename || "document").replace(/[^a-z0-9_\-\s]/gi, "_").trim();
     const convertedName = `${baseName}.pdf`;
-    const sizeKb = Math.round(Buffer.byteLength(text, "utf8") / 1024) || 1;
+    const sizeKb = Math.max(1, Math.round(Buffer.byteLength(text, "utf8") / 1024));
 
-    // Create PDF
     const pdfDoc = await PDFDocument.create();
     const font = await pdfDoc.embedFont(
       fontStyle === "courier" ? StandardFonts.Courier :
@@ -274,25 +274,19 @@ router.post("/text-to-pdf", authMiddleware, async (req, res) => {
     );
 
     const size = parseInt(fontSize) || 12;
-    const pageWidth = 595.28;  // A4
-    const pageHeight = 841.89; // A4
+    const pageWidth = 595.28;
+    const pageHeight = 841.89;
     const margin = 72;
-    const lineHeight = size * 1.4;
+    const lineHeight = size * 1.5;
     const maxWidth = pageWidth - margin * 2;
 
-    // Word wrap function
-    function wrapText(text, font, size, maxWidth) {
-      const paragraphs = text.split("\n");
+    function wrapText(inputText) {
+      const paragraphs = inputText.split("\n");
       const lines = [];
-
       for (const para of paragraphs) {
-        if (para.trim() === "") {
-          lines.push("");
-          continue;
-        }
+        if (para.trim() === "") { lines.push(""); continue; }
         const words = para.split(" ");
         let currentLine = "";
-
         for (const word of words) {
           const testLine = currentLine ? `${currentLine} ${word}` : word;
           const testWidth = font.widthOfTextAtSize(testLine, size);
@@ -308,9 +302,7 @@ router.post("/text-to-pdf", authMiddleware, async (req, res) => {
       return lines;
     }
 
-    const allLines = wrapText(text, font, size, maxWidth);
-
-    // Paginate
+    const allLines = wrapText(text);
     let currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
     let y = pageHeight - margin;
 
@@ -319,8 +311,7 @@ router.post("/text-to-pdf", authMiddleware, async (req, res) => {
         currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
         y = pageHeight - margin;
       }
-
-      if (line !== "") {
+      if (line.trim() !== "") {
         currentPage.drawText(line, {
           x: margin,
           y,
@@ -336,5 +327,17 @@ router.post("/text-to-pdf", authMiddleware, async (req, res) => {
     const pdfBuffer = Buffer.from(pdfBytes);
 
     uploadToStorage(pdfBuffer, req.user.id, convertedName).catch(console.warn);
+    await logConversion(req.user.id, `${baseName}.txt`, convertedName, "text-to-pdf", sizeKb, "success");
 
-    await logConversion(req.user.id, `${baseName}.txt`, convertedName, "text-to-pdf", sizeKb, "success")
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${convertedName}"`);
+    res.send(pdfBuffer);
+
+  } catch (err) {
+    console.error("Text to PDF error:", err);
+    await logConversion(req.user?.id, "text_input.txt", "", "text-to-pdf", 0, "failed").catch(() => {});
+    res.status(500).json({ error: "Conversion failed", message: err.message });
+  }
+});
+
+module.exports = router;
