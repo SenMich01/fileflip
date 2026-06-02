@@ -1,20 +1,23 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import Navbar from "../components/Navbar";
 import FileUploader from "../components/FileUploader";
+import ImageToText from "../components/ImageToText";
 import ConversionHistory from "../components/ConversionHistory";
 
 export default function Dashboard({ session }) {
   const historyRef = useRef(null);
+  const [activeTab, setActiveTab] = useState("convert");
 
   const handleConversionComplete = () => {
-    // Refresh history after a short delay to let DB write complete
     setTimeout(() => {
       historyRef.current?.refresh();
     }, 800);
   };
 
-  const name = session?.user?.user_metadata?.full_name ||
-    session?.user?.email?.split("@")[0] || "there";
+  const name =
+    session?.user?.user_metadata?.full_name ||
+    session?.user?.email?.split("@")[0] ||
+    "there";
 
   return (
     <div className="gradient-bg min-h-screen">
@@ -22,81 +25,63 @@ export default function Dashboard({ session }) {
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
         {/* Header */}
-        <div className="mb-10 animate-fade-up" style={{ opacity: 0, animationFillMode: "forwards" }}>
-          <h1 className="font-display text-3xl sm:text-4xl font-bold text-white mb-2">
+        <div className="mb-8 animate-fade-up" style={{ opacity: 0, animationFillMode: "forwards" }}>
+          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">
             Hey, {name} 👋
           </h1>
-          <p className="text-white/40">Convert your documents in seconds — PDF ↔ Word.</p>
+          <p className="text-white/40">Convert documents and extract text from images.</p>
         </div>
 
-        {/* Stats bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-10 animate-fade-up stagger-1" style={{ opacity: 0, animationFillMode: "forwards" }}>
-          <StatCard
-            icon={
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-              </svg>
-            }
-            label="PDF → Word"
-            desc="Extract & format text"
-            color="text-orange-400"
-            bg="bg-orange-500/10"
-          />
-          <StatCard
-            icon={
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
-              </svg>
-            }
-            label="Word → PDF"
-            desc="Print-ready PDFs"
-            color="text-electric-400"
-            bg="bg-electric-500/10"
-          />
-          <div className="hidden sm:block card p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-green-500/10 rounded-lg flex items-center justify-center text-green-400">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                </svg>
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-white">Secure</p>
-                <p className="text-xs text-white/30">Files stored privately</p>
-              </div>
-            </div>
-          </div>
+        {/* Tab switcher */}
+        <div className="flex gap-2 mb-8 p-1 bg-white/5 border border-white/8 rounded-2xl w-full sm:w-fit animate-fade-up stagger-1" style={{ opacity: 0, animationFillMode: "forwards" }}>
+          <button
+            onClick={() => setActiveTab("convert")}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+              activeTab === "convert"
+                ? "bg-blue-500 text-white shadow-lg shadow-blue-500/20"
+                : "text-white/40 hover:text-white/70"
+            }`}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
+            Convert Files
+          </button>
+          <button
+            onClick={() => setActiveTab("ocr")}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+              activeTab === "ocr"
+                ? "bg-purple-500 text-white shadow-lg shadow-purple-500/20"
+                : "text-white/40 hover:text-white/70"
+            }`}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+            Image to Text
+          </button>
         </div>
 
         {/* Main content */}
         <div className="grid lg:grid-cols-5 gap-6">
-          {/* Uploader - larger */}
+          {/* Tool panel */}
           <div className="lg:col-span-2 animate-fade-up stagger-2" style={{ opacity: 0, animationFillMode: "forwards" }}>
-            <FileUploader onConversionComplete={handleConversionComplete} />
+            {activeTab === "convert" ? (
+              <FileUploader onConversionComplete={handleConversionComplete} />
+            ) : (
+              <ImageToText onConversionComplete={handleConversionComplete} />
+            )}
           </div>
 
-          {/* History - wider */}
+          {/* History */}
           <div className="lg:col-span-3 animate-fade-up stagger-3" style={{ opacity: 0, animationFillMode: "forwards" }}>
             <ConversionHistory ref={historyRef} />
           </div>
         </div>
       </main>
-    </div>
-  );
-}
-
-function StatCard({ icon, label, desc, color, bg }) {
-  return (
-    <div className="card p-4">
-      <div className="flex items-center gap-3">
-        <div className={`w-8 h-8 ${bg} rounded-lg flex items-center justify-center ${color}`}>
-          {icon}
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-white">{label}</p>
-          <p className="text-xs text-white/30">{desc}</p>
-        </div>
-      </div>
     </div>
   );
 }
