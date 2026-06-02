@@ -12,36 +12,40 @@ const ConversionHistory = forwardRef(function ConversionHistory(_, ref) {
       .select("*")
       .order("created_at", { ascending: false })
       .limit(50);
-
     if (!error) setHistory(data || []);
     setLoading(false);
   };
 
   useEffect(() => { fetchHistory(); }, []);
-
-  // Expose refresh method to parent
   useImperativeHandle(ref, () => ({ refresh: fetchHistory }));
 
   const formatDate = (iso) => {
     const d = new Date(iso);
-    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) +
-      " · " + d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+    return (
+      d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) +
+      " · " +
+      d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
+    );
   };
 
   const typeLabel = (type) => {
-    return type === "pdf-to-docx" ? "PDF → Word" : "Word → PDF";
+    if (type === "pdf-to-docx") return "PDF → Word";
+    if (type === "docx-to-pdf") return "Word → PDF";
+    if (type === "image-to-text") return "Image → Text";
+    return type;
   };
 
   const typeColor = (type) => {
-    return type === "pdf-to-docx"
-      ? "text-orange-400 bg-orange-500/10 border-orange-500/20"
-      : "text-blue-400 bg-blue-500/10 border-blue-500/20";
+    if (type === "pdf-to-docx") return "text-orange-400 bg-orange-500/10 border-orange-500/20";
+    if (type === "docx-to-pdf") return "text-blue-400 bg-blue-500/10 border-blue-500/20";
+    if (type === "image-to-text") return "text-purple-400 bg-purple-500/10 border-purple-500/20";
+    return "text-white/40 bg-white/5 border-white/10";
   };
 
   return (
     <div className="card p-6 sm:p-8">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="font-display text-xl font-bold text-white">Conversion History</h2>
+        <h2 className="text-xl font-bold text-white">Conversion History</h2>
         <button
           onClick={fetchHistory}
           className="text-white/30 hover:text-white/60 transition-colors p-1.5 rounded-lg hover:bg-white/5"
@@ -56,7 +60,7 @@ const ConversionHistory = forwardRef(function ConversionHistory(_, ref) {
 
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <div className="w-6 h-6 border-2 border-electric-500 border-t-transparent rounded-full animate-spin" />
+          <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
         </div>
       ) : history.length === 0 ? (
         <div className="text-center py-12">
@@ -68,7 +72,7 @@ const ConversionHistory = forwardRef(function ConversionHistory(_, ref) {
             </svg>
           </div>
           <p className="text-white/30 text-sm">No conversions yet</p>
-          <p className="text-white/15 text-xs mt-1">Your conversion history will appear here</p>
+          <p className="text-white/15 text-xs mt-1">Your history will appear here</p>
         </div>
       ) : (
         <div className="overflow-x-auto -mx-2">
@@ -84,16 +88,12 @@ const ConversionHistory = forwardRef(function ConversionHistory(_, ref) {
             </thead>
             <tbody className="divide-y divide-white/5">
               {history.map((row) => (
-                <tr key={row.id} className="group hover:bg-white/2 transition-colors">
+                <tr key={row.id} className="hover:bg-white/2 transition-colors">
                   <td className="py-3 px-2">
                     <div className="flex flex-col">
-                      <span className="text-sm text-white/70 truncate max-w-[160px]">
-                        {row.original_filename}
-                      </span>
+                      <span className="text-sm text-white/70 truncate max-w-[160px]">{row.original_filename}</span>
                       {row.converted_filename && (
-                        <span className="text-xs text-white/25 truncate max-w-[160px]">
-                          → {row.converted_filename}
-                        </span>
+                        <span className="text-xs text-white/25 truncate max-w-[160px]">→ {row.converted_filename}</span>
                       )}
                     </div>
                   </td>
@@ -103,9 +103,7 @@ const ConversionHistory = forwardRef(function ConversionHistory(_, ref) {
                     </span>
                   </td>
                   <td className="py-3 px-2">
-                    <span className="text-sm text-white/40">
-                      {row.file_size_kb ? `${row.file_size_kb} KB` : "—"}
-                    </span>
+                    <span className="text-sm text-white/40">{row.file_size_kb ? `${row.file_size_kb} KB` : "—"}</span>
                   </td>
                   <td className="py-3 px-2">
                     {row.status === "success" ? (
