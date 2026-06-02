@@ -204,6 +204,7 @@ router.post("/docx-to-pdf", authMiddleware, upload.single("file"), async (req, r
     // Step 3: Convert HTML to PDF using Puppeteer
     const browser = await puppeteer.launch({
       headless: "new",
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || null,
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
