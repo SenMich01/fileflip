@@ -4,7 +4,7 @@ services:
     name: fileflip-backend
     runtime: node
     rootDir: backend
-    buildCommand: chmod +x build.sh && ./build.sh
+    buildCommand: npm install
     startCommand: node server.js
     envVars:
       - key: NODE_ENV
