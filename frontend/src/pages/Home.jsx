@@ -535,7 +535,7 @@ export default function Home() {
             </div>
             <span className="text-sm font-bold text-white/70">FileFlip</span>
           </div>
-          <p className="text-sm text-white/20">© {new Date().getFullYear()} FileFlip. Convert smarter, not harder.</p>
+          <p className="text-sm text-white/20">© {new Date().getFullYear()} FileFlip. Built by Senayon Agboyinu.</p>
           <div className="flex items-center gap-6">
             <Link to="/login" className="text-sm text-white/30 hover:text-white/60 transition-colors">Sign in</Link>
             <Link to="/register" className="text-sm text-white/30 hover:text-white/60 transition-colors">Register</Link>
